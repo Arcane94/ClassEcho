@@ -1,0 +1,1 @@
+//Create Model for Session inforamtion, model should be able to be used as a foreign key in both Student Observation and Teacher Obseravtion Tables
