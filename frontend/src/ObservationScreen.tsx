@@ -41,16 +41,19 @@ export default function ObservationScreen() {
     const [addNoteOpen, setAddNoteOpen] = useState(false);
 
     //State to store selected student tag
-    const [selectedStudentTag, setSelectedStudentTag] = useState('');
+    const [selectedStudentTags, setSelectedStudentTags] = useState<string[]>([]);
 
-    //State to store selected behavior tag
-    const [selectedBehaviorTag, setSelectedBehaviorTag] = useState('');
+    //State to store selected student affect tag
+    const [selectedAffectTags, setSelectedAffectTags] = useState<string[]>([]);
+
+    //State to store selected behavior tags
+    const [selectedBehaviorTags, setSelectedBehaviorTags] = useState<string[]>([]);
 
     //State to store selected function tag
-    const [selectedFunctionTag, setSelectedFunctionTag] = useState('');
+    const [selectedFunctionTags, setSelectedFunctionTags] = useState<string[]>([]);
 
     //State to store selected structure tag
-    const [selectedStructureTag, setSelectedStructureTag] = useState('');
+    const [selectedStructureTags, setSelectedStructureTags] = useState<string[]>([]);
 
     //State to store student ID
     const [studentId, setStudentID] = useState('');
@@ -75,6 +78,15 @@ export default function ObservationScreen() {
 
     //List of Student Tags for Student Observation
     let studentTags = ["Coding", "Collaborating", "Logging In", "Planning", "Reading Code", "Reading Instructions", "Talking w/ teacher", "Waiting for help", "Debugging", "On Unrelated Tab", "Requesting Help", "Running Code", "Talking w/ peer"];
+
+    //Helper function that toggles a string in a useState array for selecting tags
+    const toggleStringInArray = (array: string[], item: string): string[] => {
+        if (array.includes(item)) {
+          return array.filter(i => i !== item);
+        } else {
+          return [...array, item];
+        }
+      };
 
     //Function to Format the "Start: ..." time string in header
     const formatTimeString = () => {
@@ -120,7 +132,7 @@ export default function ObservationScreen() {
                             <div className="py-3 px-[24px] w-full bg-[var(--light-blue-accent)]">
                                 <div className="flex gap-2 flex-wrap items-center">
                                     {behaviorByStudentTags.map((tag, index) => (
-                                        <button key={index} onClick={() => setSelectedBehaviorTag(tag)} className={`text-sm px-2 py-2 rounded-xl ${selectedBehaviorTag === tag ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
+                                        <button key={index} onClick={() => setSelectedBehaviorTags((prevTags: string[]) => toggleStringInArray(prevTags, tag))} className={`text-sm px-2 py-2 rounded-xl ${selectedBehaviorTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
                                     ))}
                                     {/* Add Tag Button */}
                                     <button className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center'>+</button>
@@ -138,7 +150,7 @@ export default function ObservationScreen() {
                         {/*Function Tag Options */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
                             {functionTags.map((tag, index) => (
-                                <button key={index} onClick={() => setSelectedFunctionTag(tag)} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedFunctionTag === tag ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
+                                <button key={index} onClick={() => setSelectedFunctionTags((prevTags: string[]) => toggleStringInArray(prevTags, tag))} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedFunctionTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
                             ))}
                             <button className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
                         </div>
@@ -148,7 +160,7 @@ export default function ObservationScreen() {
                         {/*Function Tag Options */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
                             {structureTags.map((tag, index) => (
-                                <button key={index} onClick={() => setSelectedStructureTag(tag)} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStructureTag === tag ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
+                                <button key={index} onClick={() => setSelectedStructureTags((prevTags: string[]) => toggleStringInArray(prevTags, tag))} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStructureTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
                             ))}
                             <button className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
                         </div>
@@ -192,7 +204,7 @@ export default function ObservationScreen() {
                         {/* Student Tags Section */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center bg-[var(--light-green-accent)] mt-4">
                             {studentTags.map((tag, index) => (
-                                <button key={index} onClick={() => setSelectedStudentTag(tag)} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStudentTag === tag ? 'bg-[var(--green-accent)] text-white' : 'bg-white'}`}>{tag}</button>
+                                <button key={index} onClick={() => setSelectedStudentTags((prevTags: string[]) => toggleStringInArray(prevTags, tag))} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStudentTags.includes(tag) ? 'bg-[var(--green-accent)] text-white' : 'bg-white'}`}>{tag}</button>
                             ))}
                             <button className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
                         </div>
@@ -202,7 +214,7 @@ export default function ObservationScreen() {
 
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
                             {studentAffects.map((tag, index) => (
-                                <button key={index} onClick={() => setSelectedStudentTag(tag)} className={`flex justify-between items-center gap-1.5 text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStudentTag === tag ? 'bg-[var(--green-accent)] text-white' : 'bg-white'}`}>
+                                <button key={index} onClick={() => setSelectedAffectTags((prevTags: string[]) => toggleStringInArray(prevTags, tag))} className={`flex justify-between items-center gap-1.5 text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedAffectTags.includes(tag) ? 'bg-[var(--green-accent)] text-white' : 'bg-white'}`}>
                                     <span><img src={studentAffectIcons[index]} alt="Emotion Icon" className="w-[24px] h-[24px]"/></span>
                                     {tag}
                                 </button>
