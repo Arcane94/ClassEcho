@@ -26,7 +26,7 @@ export default function SmallTextForm({ label, value, onChange, onBlur, placehol
         onChange={onChange}
         onBlur={onBlur}
         placeholder={placeholder}
-        className={`mt-1 bg-gray-300 border h-[30px] rounded-lg focus:outline-none ${className}`}
+        className={`mt-1 pl-2 bg-gray-300 border h-[30px] rounded-lg focus:outline-none ${className}`}
         style={{backgroundColor: 'var(--form-background)', borderColor: 'var(--grey-accent)'}}
       />
     </div>

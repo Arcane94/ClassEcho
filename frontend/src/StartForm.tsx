@@ -34,6 +34,46 @@ export default function StartForm() {
     const [lessonDescriptionErrorMsg, setLessonDescriptionErrorMsg] = useState('');
     
 
+    //Async function to handle submission of form 
+    const handleFormSubmission = async () => {
+        //Prepare data to send to server
+        const payload = {
+            username,
+            teacherName,
+            lessonTitle,
+            lessonDescription,
+            currentTime,
+        };
+
+        try {
+            //Send Post call to backend with form data
+            const res = await fetch('http://localhost:3011/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json'},
+                body: JSON.stringify(payload),
+            });
+
+            //Check Response
+            if (!res.ok) {
+                throw new Error("Failed to create session in DB");
+            }
+
+            //Get Data back from response
+            const data = await res.json();
+            console.log('Data', data.sessionId);
+            //Use sessionId from response to navigate to observation page with the new session id embedded in the url
+            if (data.sessionId) {
+                navigate(`/observation?sessionId=${data.sessionId}`);
+            } else {
+                //Otherwise throw an error
+                throw new Error("Session ID missing in response");
+            }
+        } catch (error) {
+            console.error("Error submitting session form:", error);
+        }
+
+
+    }
     //Function to pull current time from browser
     const retrieveBrowserTime = () => {
         //pull datetime
@@ -164,11 +204,11 @@ export default function StartForm() {
                     )}
                 </div>
                 {/*Button to Submit From when Width exceeds 762px for more centeralized design */}
-                <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)] text-white" onClick={() => navigate('/observation')}>Start Observation</button>
+                <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)] text-white" onClick={() => handleFormSubmission()}>Start Observation</button>
             </div>
 
             <footer className="fixed bottom-0 left-0 w-screen flex items-center justify-end bg-[var(--grey-accent)] pr-[24px] py-2.5 md:hidden">
-                <button className="mr-[10px] t-[16px]" onClick={() => navigate('/observation')}>Start Observation</button>
+                <button className="mr-[10px] t-[16px]" onClick={() => handleFormSubmission()}>Start Observation</button>
                 <ArrowRight className="w-[24px] h-[24px] flex-shrink-0"/>
             </footer>
         </>
