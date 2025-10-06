@@ -49,7 +49,7 @@ exports.createTeacherObservation = async (req, res) => {
       structure_tags,
       function_tags,
       submitted_by_user: submitted_by_user ?? false, // default false if undefined
-      recording: recording === undefined ? null : !!recording, // default null if not provided
+      recording: recording == null ? null : !!recording,
       picture_attachments: picture_attachments ?? null,
     };
 

@@ -16,7 +16,7 @@ import { createStudentObservation } from "./utils/createStudentObservation";
 import type { SessionData } from './utils/fetchSessionById';
 
 
-//Affect Icons
+//Affect Icon Svg Imports 
 import angryAffectIcon from "./assets/images/angry_affect.svg";
 import boredAffectIcon from "./assets/images/bored_affect.svg";
 import confusedAffectIcon from "./assets/images/confused_affect.svg";
@@ -27,6 +27,7 @@ import relaxedAffectIcon from "./assets/images/relaxed_affect.svg";
 import tiredAffectIcon from "./assets/images/tired_affect.svg";
 import sadAffectIcon from "./assets/images/sad_affect.svg";
 
+//Defines the behavior and design of the screen allowing users to make observations on both teachers an students
 export default function ObservationScreen() {
 
     //Navigator
@@ -47,19 +48,25 @@ export default function ObservationScreen() {
     //State to store if user is observing a teacher (serves as a way to switch between student and teacher screens)
     const [observingTeacher, setObservingTeacher] = useState(true);
 
-    //State to store if the user is currently recording a task
-    const [isRecording, setIsRecording] = useState(false);
+    //State to store if the user is currently recording a task on teacher obsrvation side
+    const [isRecordingTeacherObs, setIsRecordingTeacherObs] = useState(false);
+
+    //State to store if the user is currently recording a task on student observation side
+    const [isRecordingStudentObs, setIsRecordingStudentObs] = useState(false);
 
     //State to store last time an observation was submitted (starts empty)
     const [observationTime, setObservationTime] = useState('');
 
-    //State to store potential extra notes
-    const [extraNote, setExtraNote] = useState("");
+    //State to store potential extra notes from teacherObsrvation
+    const [extraTeacherNote, setExtraTeacherNote] = useState("");
+
+     //State to store potential extra notes from studentObsrvation
+     const [extraStudentNote, setExtraStudentNote] = useState("");
 
     //State to store selected behavior tag class
     const [behaviorClass, setBehaviorClass] = useState('By Student');
 
-    //State to store if user is adding a note
+    //State to store if user is adding a note on the teacher side
     const [addNoteOpen, setAddNoteOpen] = useState(false);
 
     //State to store selected student tag
@@ -83,8 +90,11 @@ export default function ObservationScreen() {
     //State to store a map of selected custom tags with the key being the section they belong and the value being an array of the tags selected from that section
     const [selectedCustomTags, setSelectedCustomTags] = useState<Map<string, string[]>>(new Map());
 
-    //State to store student ID
-    const [studentId, setStudentID] = useState('');
+    //State to store student ID(s) from teacher side
+    const [teacherObsStudentId, setTeacherObsStudentId] = useState('');
+
+    //State to store student ID(s) from student side
+    const [studentObsStudentId, setStudentObsStudentId] = useState('');
 
     //Constant List of Student Emotion Affects
     const studentAffects = ["Excited", "Suprised", "Happy", "Relaxed", "Tired", "Bored", "Sad", "Confused", "Frustrated", "Angry"];
@@ -161,21 +171,29 @@ export default function ObservationScreen() {
     }
 
     //Helper function to send teacher observation info to server when the form is officially submitted
-    const handleTeacherObservationSubmit = async () => {
+    const handleTeacherObservationSubmit = async (recording?: boolean) => {
         try {
             //Built data to send to util function
-            const teacherObsData = {
+            const teacherObsData: any = {
                 session_id: Number(sessionId),
                 //Ensure difference between teacher and student form ids
-                student_id: studentId,
+                student_id: teacherObsStudentId,
                 behavior_tags: selectedBehaviorTags,
                 function_tags: selectedFunctionTags,
                 structure_tags: selectedStructureTags,
                 submitted_by_user: true,
-                note: extraNote,
+                note: extraTeacherNote,
                 //New tag sent only to controller in server to loosen error-checking for single click observations
-                single_click: true,
+                single_click: false,
+                recording: null,
             };
+
+            //Include recording flag if true
+            if (recording) {
+                teacherObsData.recording = true;
+            } else if (!recording) {
+                teacherObsData.recording = false;
+            }
 
             //Call util function with formatted data
             await createTeacherObservation(teacherObsData);
@@ -191,13 +209,14 @@ export default function ObservationScreen() {
             const singleTagArray = [tagText];
 
             //Built data to send to util function
-            const teacherObsData = {
+            const teacherObsData: any = {
                 session_id: Number(sessionId),
                 //Ensure difference between teacher and student form ids
-                student_id: studentId,
+                student_id: teacherObsStudentId,
                 [tagCategory]: singleTagArray,
                 submitted_by_user: false,
                 single_click: true,
+                recording: null,
             };
 
             //Call util function with formatted data
@@ -208,21 +227,28 @@ export default function ObservationScreen() {
     }
 
     //Helper function to send student observation info to server when the form is officially submitted
-    const handleStudentObservationSubmit = async () => {
+    const handleStudentObservationSubmit = async (recording?: boolean) => {
         try {
             //Built data to send to util function
-            const studentObsData = {
+            const studentObsData: any = {
                 session_id: Number(sessionId),
                 //Ensure difference between teacher and student form ids
-                student_id: studentId,
+                student_id: studentObsStudentId,
                 behavior_tags: selectedStudentTags,
                 affect: selectedAffectTags,
                 submitted_by_user: true,
-                note: extraNote,
+                note: extraStudentNote,
                 //New tag sent only to controller in server to loosen error-checking for single click observations
                 single_click: true,
+                recording: null,
             };
 
+            //Add recording tag if it is true
+            if (recording) {
+                studentObsData.recording = true;
+            } else if (!recording) {
+                studentObsData.recording = false;
+            }
             //Call util function with formatted data
             await createStudentObservation(studentObsData);
         } catch (error) {
@@ -237,19 +263,66 @@ export default function ObservationScreen() {
             const singleTagArray = [tagText];
 
             //Built data to send to util function
-            const studentObsData = {
+            const studentObsData: any = {
                 session_id: Number(sessionId),
                 //Ensure difference between teacher and student form ids
-                student_id: studentId,
+                student_id: studentObsStudentId,
                 [tagCategory]: singleTagArray,
                 submitted_by_user: false,
                 single_click: true,
+                recording: null,
             };
 
             //Call util function with formatted data
             await createStudentObservation(studentObsData);
         } catch (error) {
             console.error('Failed to submit student observation', error);
+        }
+    }
+
+    //Helper function to handle calling correct utils and making correct data entry when user begins recording an observation
+    const handleStartRecordingObservation = async () => {
+        //Set which entity is being recorded
+        if (observingTeacher) {
+            setIsRecordingTeacherObs(true);
+          } else {
+            setIsRecordingStudentObs(true);
+        }
+
+        try {
+            //Small data object to send to server for both teacher and student obsrvations
+            const observationData = {
+                session_id: Number(sessionId),
+                recording: true,
+                single_click: true,
+            }
+            //Send observation to either student or teacher data tables, depending on which is currently being recorded
+            if (observingTeacher) {
+                await createTeacherObservation(observationData);
+            } else {
+                await createStudentObservation(observationData);
+            }        
+        } catch (error) {
+            console.error('Failed to submit observation', error);
+        }
+    }
+
+    //Helper function to handle calling correct utils and making correct data entry when user stops recording an observation
+    const handleStopRecordingObservation = async () => {
+        //Set both flags to stop recording for safety 
+        setIsRecordingTeacherObs(false);
+        setIsRecordingStudentObs(false);
+
+        try {
+            //Send observation to either student or teacher data tables, depending on which has just stopped being recording
+            //Delegate to the function in place for form submission for both sides
+            if (observingTeacher) {
+                await handleTeacherObservationSubmit(false);
+            } else {
+                await handleStudentObservationSubmit(false);
+            }        
+        } catch (error) {
+            console.error('Failed to submit observation', error);
         }
     }
 
@@ -264,8 +337,8 @@ export default function ObservationScreen() {
             <div className="flex items-center justify-center w-full">
                 <div className="max-w-[800px]">
                     <div className="mt-[51px] w-full flex items-center">
-                        <button onClick={() => setObservingTeacher(true)} className={`text-xl w-1/2 py-3  ${observingTeacher ? 'bg-[var(--accent-color)] text-white' : 'bg-[var(--light-blue-accent)] text-black'}`} style={{cursor: 'pointer'}}>Teacher</button>
-                        <button onClick={() => setObservingTeacher(false)} className={`text-xl w-1/2 py-3  ${!observingTeacher ? 'bg-[var(--green-accent)] text-white' : 'bg-[var(--light-green-accent)] text-black'}`} style={{cursor: 'pointer'}}>Student</button>
+                        <button onClick={() => !isRecordingStudentObs ? setObservingTeacher(true) : null} className={`text-xl w-1/2 py-3  ${isRecordingStudentObs ? 'bg-gray-300 text-black' : observingTeacher ? 'bg-[var(--accent-color)] text-white' : 'bg-[var(--light-blue-accent)] text-black'}`} style={{ cursor: isRecordingStudentObs ? 'not-allowed' : 'pointer'}}>Teacher</button>
+                        <button onClick={() => !isRecordingTeacherObs ? setObservingTeacher(false) : null} className={`text-xl w-1/2 py-3  ${isRecordingTeacherObs ? 'bg-gray-300 text-black' : !observingTeacher ? 'bg-[var(--green-accent)] text-white' : 'bg-[var(--light-green-accent)] text-black'}`} style={{ cursor: isRecordingTeacherObs ? 'not-allowed' : 'pointer'}}>Student</button>
                     </div>
 
                     {/*Content Switch between teacher and student observation screens */}
@@ -310,7 +383,7 @@ export default function ObservationScreen() {
                                 {/*Student ID Button */}
                                 <div className="flex mt-4 items-center">
                                     <label htmlFor="studentID" className="text-sm">Student ID </label>
-                                    <input id="studentID" style={{cursor: 'text'}} type="text" value={studentId} onChange={(e) => setStudentID(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/4"/>
+                                    <input id="studentID" style={{cursor: 'text'}} type="text" value={teacherObsStudentId} onChange={(e) => setTeacherObsStudentId(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/4"/>
                                 </div>
                             </div>
                         </div>
@@ -377,10 +450,10 @@ export default function ObservationScreen() {
                             <div className={`mx-[24px] mt-3`}>
                                 <SmallTextForm 
                                     label="Extra Notes"
-                                    id="extraNotes"
-                                    name="extraNotes"
-                                    onChange={(e) => setExtraNote(e.target.value)}
-                                    value={extraNote}
+                                    id="extraTeacherNotes"
+                                    name="extraTeacherNotes"
+                                    onChange={(e) => setExtraTeacherNote(e.target.value)}
+                                    value={extraTeacherNote}
                                     placeholder=""
                                     className="h-[98px]"
                                 />
@@ -392,7 +465,7 @@ export default function ObservationScreen() {
                         {/* Request and Store Student ID(s) */}
                         <div className="flex mx-[24px] items-center justify-start gap-2 my-4">
                             <label className="text-sm">Student ID(s)</label>
-                            <input id="studentID" type="text" value={studentId} style={{cursor: 'text'}} onChange={(e) => setStudentID(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/2"/> 
+                            <input id="studentID" type="text" value={studentObsStudentId} style={{cursor: 'text'}} onChange={(e) => setStudentObsStudentId(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/2"/> 
                         </div>
 
                         {/* On Task/Off Task Toggle */}
@@ -435,6 +508,19 @@ export default function ObservationScreen() {
                                 </button>
                             ))}
                         </div>
+
+                        {/* Add Note Input for Student obsrevation side */}
+                        <div className={`mx-[24px] mt-3`}>
+                            <SmallTextForm 
+                                label="Extra Notes"
+                                id="extraStudentNotes"
+                                name="extraStudentNotes"
+                                onChange={(e) => setExtraStudentNote(e.target.value)}
+                                value={extraStudentNote}
+                                placeholder=""
+                                className="h-[98px]"
+                            />
+                        </div>
                         </>
                     )
                 }
@@ -447,15 +533,15 @@ export default function ObservationScreen() {
                             }
                         </div>
                         <div>
-                            {!isRecording ?
+                            {(!isRecordingTeacherObs && !isRecordingStudentObs) ?
                                 (   <div className="flex gap-2">
-                                        <img src={startRecordPng} alt="Start Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={() => setIsRecording(true)}/>
+                                        <img src={startRecordPng} alt="Start Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={handleStartRecordingObservation}/>
                                         <img src={sendFormSvg} alt="Send Form Button" onClick={() => { observingTeacher ? handleTeacherObservationSubmit() : handleStudentObservationSubmit(); setObservationTime(getCurrentTimeFormatted())}} style={{cursor: 'pointer'}} className="w-[36px] h-[36px]"/>
     
                                     </div>
                                 ) :  (
                                     <div className="flex gap-2">
-                                        <img src={stopRecordSvg} alt="Stop Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={() => setIsRecording(false)}/>
+                                        <img src={stopRecordSvg} alt="Stop Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={handleStopRecordingObservation}/>
                                         <img src={invalidSendFormSvg} alt="Invalid Send Form Button" style={{cursor: 'not-allowed'}} className="w-[36px] h-[36px]"/>
                                     </div>
                             )}

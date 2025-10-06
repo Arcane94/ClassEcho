@@ -19,7 +19,7 @@ exports.create = async function (info) {
     submitted_by_user: !!info.submitted_by_user,
 
     //Recording flag
-    recording: (info.recording === undefined ? null : !!info.recording),
+    recording: (info.recording === undefined ? null : info.recording),
     // Notes + optional attachments (e.g., image keys/URLs).
     note: info.note ?? null,
     picture_attachments: info.picture_attachments ? (Buffer.isBuffer(info.picture_attachments) ? info.picture_attachments

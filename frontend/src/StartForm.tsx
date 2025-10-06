@@ -6,7 +6,7 @@ import './components/DateForm'
 import { useState, useEffect} from "react";
 import SmallTextForm from "./components/SmallTextForm";
 import DateForm from "./components/DateForm";
-import ChangeTimeModal from "./components/ChangeTimeModal";
+//import ChangeTimeModal from "./components/ChangeTimeModal";
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 
@@ -19,7 +19,7 @@ export default function StartForm() {
     //State to hold date
     const [date, setDate] = useState<Date | null>(new Date());
     //Determines if change time modal is displayed
-    const [timeModalOpen, setTimeModalOpen] = useState(false);
+    //const [timeModalOpen, setTimeModalOpen] = useState(false);
     //Holds user name for text input form and potential error message
     const [username, setUsername] = useState('');
     const [usernameErrorMsg, setUsernameErrorMsg] = useState('');
@@ -76,27 +76,27 @@ export default function StartForm() {
 
 
     }
-    //Function to pull current time from browser
-    const retrieveBrowserTime = () => {
-        //pull datetime
-        const now = new Date();
-        //get hours and minutes
-        let hours = now.getHours();
-        const minutes = now.getMinutes().toString().padStart(2, "0"); //pad minutes so single digits will display like '05' instead of '5'
-        //Determine AM or PM
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        //Convert hours out of military time
-        hours = hours % 12 || 12;
 
-        return `${hours}:${minutes} ${ampm}`;
-    }
-
-    //UseEffect statement to set current time to browser time when component mounts and track time
+    //useEffect statement to continously update time shown in form so that it always matches current browser time
     useEffect(() => {
-        setCurrentTime(retrieveBrowserTime());
-
-        
-    }, []);
+        const updateTime = () => {
+          const now = new Date();
+          let hours = now.getHours();
+          const minutes = now.getMinutes().toString().padStart(2, "0");
+          const ampm = hours >= 12 ? "PM" : "AM";
+          hours = hours % 12 || 12;
+          setCurrentTime(`${hours}:${minutes} ${ampm}`);
+        };
+      
+        // Update immediately
+        updateTime();
+      
+        // Update every second
+        const intervalId = setInterval(updateTime, 1000);
+      
+        // Cleanup interval on component unmount
+        return () => clearInterval(intervalId);
+      }, []);
 
     return (
         <>
@@ -130,13 +130,13 @@ export default function StartForm() {
                 <div className="mt-8 w-full">
                     {/* Date and Time Header */}
                     <p className="text-[16px] font-medium ml-[24px] mr-[24px] ">Date & Time</p>
-                    <button className="text-[36px] font-light ml-[24px] mr-[24px] " onClick={() => setTimeModalOpen(true)}>
+                    <button className="text-[36px] font-light ml-[24px] mr-[24px] ">
                         {currentTime}
                     </button>
                     {/* Show Modal only if timeModalOpen is true */}
-                    { timeModalOpen && (
+                    {/* { timeModalOpen && (
                         <ChangeTimeModal onClose={() => setTimeModalOpen(false)} currentTime={currentTime} onTimeUpdate={(newTime) => setCurrentTime(newTime)}/>
-                    )}
+                    )} */}
                     <DateForm
                         label="Select a date"
                         value={date}
@@ -210,7 +210,7 @@ export default function StartForm() {
                     )}
                 </div>
                 {/*Button to Submit From when Width exceeds 762px for more centeralized design */}
-                <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)] text-white" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>Start Observation</button>
+                <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)]" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>Start Observation</button>
             </div>
 
             <footer className="fixed bottom-0 left-0 w-screen flex items-center justify-end bg-[var(--grey-accent)] pr-[24px] py-2.5 md:hidden">
