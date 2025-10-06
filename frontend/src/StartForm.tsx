@@ -36,13 +36,15 @@ export default function StartForm() {
 
     //Async function to handle submission of form 
     const handleFormSubmission = async () => {
+        //Save browser date
+        const local_time = new Date();
         //Prepare data to send to server
         const payload = {
-            username,
-            teacherName,
-            lessonTitle,
-            lessonDescription,
-            currentTime,
+            observer_name: username,
+            teacher_name: teacherName,
+            lesson_name: lessonTitle,
+            lesson_description: lessonDescription,
+            local_time,
         };
 
         try {
@@ -52,7 +54,7 @@ export default function StartForm() {
                 headers: { 'Content-Type': 'application/json'},
                 body: JSON.stringify(payload),
             });
-
+            console.log('Request Sent');
             //Check Response
             if (!res.ok) {
                 throw new Error("Failed to create session in DB");
@@ -60,10 +62,10 @@ export default function StartForm() {
 
             //Get Data back from response
             const data = await res.json();
-            console.log('Data', data.sessionId);
+            console.log('Data', data.session_id);
             //Use sessionId from response to navigate to observation page with the new session id embedded in the url
-            if (data.sessionId) {
-                navigate(`/observation?sessionId=${data.sessionId}`);
+            if (data.session_id) {
+                navigate(`/observation?sessionId=${data.session_id}`);
             } else {
                 //Otherwise throw an error
                 throw new Error("Session ID missing in response");
@@ -112,6 +114,7 @@ export default function StartForm() {
                         onChange={(e) => setUsername(e.target.value)}
                         onBlur={() => {
                             if (!username) setUsernameErrorMsg("Name is required.");
+                            if (username.length > 100) setUsernameErrorMsg("Name cannot be longer than 100 characters.")
                             //Additional Error Messages
                             else setUsernameErrorMsg('');
                         }}
@@ -149,7 +152,8 @@ export default function StartForm() {
                         value={teacherName}
                         onChange={(e) => setTeacherName(e.target.value)}
                         onBlur={() => {
-                            if (!teacherName) setTeacherNameErrorMsg("Name is required.");
+                            if (!teacherName) setTeacherNameErrorMsg("Teacher Name is required.");
+                            if (teacherName.length > 100) setTeacherNameErrorMsg("Teacher Name cannot be longer than 100 characters.");
                             //Additional Error Messages
                             else setTeacherNameErrorMsg('');
                         }}
@@ -170,7 +174,9 @@ export default function StartForm() {
                         value={lessonTitle}
                         onChange={(e) => setLessonTitle(e.target.value)}
                         onBlur={() => {
-                            if (!lessonTitle) setLessonTitleErrorMsg("Name is required.");
+                            if (!lessonTitle) setLessonTitleErrorMsg("Lesson Title is required.");
+                            if (lessonTitle.length > 100) setLessonTitleErrorMsg("Lesson Title cannot be longer than 200 characters.");
+
                             //Additional Error Messages
                             else setLessonTitleErrorMsg('');
                         }}
@@ -204,11 +210,11 @@ export default function StartForm() {
                     )}
                 </div>
                 {/*Button to Submit From when Width exceeds 762px for more centeralized design */}
-                <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)] text-white" onClick={() => handleFormSubmission()}>Start Observation</button>
+                <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)] text-white" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>Start Observation</button>
             </div>
 
             <footer className="fixed bottom-0 left-0 w-screen flex items-center justify-end bg-[var(--grey-accent)] pr-[24px] py-2.5 md:hidden">
-                <button className="mr-[10px] t-[16px]" onClick={() => handleFormSubmission()}>Start Observation</button>
+                <button className="mr-[10px] t-[16px]" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>Start Observation</button>
                 <ArrowRight className="w-[24px] h-[24px] flex-shrink-0"/>
             </footer>
         </>

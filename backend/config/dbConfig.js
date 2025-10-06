@@ -1,6 +1,6 @@
 // Import knex for database managament and model creation
 const knex = require('knex');
-const config = require('./config');
+const config = require('../config');
 
 //Connect to database using credentials defined in config.js
 const db = knex({

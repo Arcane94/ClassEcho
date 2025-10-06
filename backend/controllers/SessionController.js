@@ -2,31 +2,50 @@
 
 //Retrieve the Session Model
 const Session = require(`../models/SessionModel`);
+//Datetime conversion function
+const { toMySQLDateTime } = require('../utils/ToSQLDateTime');
 
 //Logic to create a new Session entry in database
 //POST /sessions
 exports.createSession = async (req, res) => {
     //Try to pull payload from web
     try {
+        //Save Body fields
         const {
-            username,
-            teacherName,
-            lessonTitle,
-            lessonDescription,
+            local_time,
+            observer_name,
+            teacher_name,
+            lesson_name,
+            lesson_description,
         } = req.body;
 
-        console.log(req.body);
         //Ensure fields are all filled
-        if (!username || !teacherName || !lessonTitle) {
+        if (!observer_name || !teacher_name || !lesson_name || !local_time) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        //Logic to create new session in database should go here
+        
+        //Convert local_time to sql acceptable format
+        const formattedLocalTime = toMySQLDateTime(local_time);
 
+        //Save all fields to send to model
+        const info = {
+          server_time: new Date(),
+          local_time: formattedLocalTime,
+          observer_name,
+          teacher_name,
+          lesson_name: lesson_name,
+          lesson_description: lesson_description || null,
+        };
+
+        //Logic to create new session in database should go here
+        const session_id = await Session.create(info);
+
+        console.log('Retrieved id: ', session_id);
         //For now, return a madeup sessionId to frontend
-        return res.status(201).json({ sessionId: 5 });
+        return res.status(201).json({ session_id });
     } catch (error) {
-        console.error('Unexpected error creating session', err);
+        console.error('Unexpected error creating session', error);
         return res.status(500).json({ error: 'Unexpected Session Creation Error'});
     }
 };
@@ -39,8 +58,8 @@ exports.getSessionById = async (req, res) => {
       const { id } = req.params;
   
       //Logic to retrieve session from database using id
-      session = null;
-  
+      const session = await Session.getById(id);
+      console.log(session);
       //Return a 404 error if session cannot be found
       if (!session) {
         return res.status(404).json({ error: 'Session not found' });
