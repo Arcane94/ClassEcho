@@ -14,6 +14,7 @@ exports.create = async function (info) {
     behavior_tags:  info.behavior_tags  ? JSON.stringify(info.behavior_tags)  : null,
     function_tags:  info.function_tags  ? JSON.stringify(info.function_tags)  : null,
     structure_tags: info.structure_tags ? JSON.stringify(info.structure_tags) : null,
+    custom_tags: info.custom_tags ? JSON.stringify(info.custom_tags) : null,
 
     // Single click vs grouped "sstart"
     submitted_by_user: !!info.submitted_by_user,
@@ -42,6 +43,9 @@ exports.update = async function (id, patch) {
     upd.function_tags = patch.function_tags ? JSON.stringify(patch.function_tags) : null;
   }
   if (patch.structure_tags !== undefined) {
+    upd.custom_tags = patch.custom_tags ? JSON.stringify(patch.custom_tags) : null;
+  }
+  if (patch.custom_tags !== undefined) {
     upd.structure_tags = patch.structure_tags ? JSON.stringify(patch.structure_tags) : null;
   }
   if (patch.submitted_by_user !== undefined) {

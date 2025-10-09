@@ -87,8 +87,11 @@ export default function ObservationScreen() {
     //State to store a map of custom tags with the key being the section they belong and the value being the tag name
     const [customTags, setCustomTags] = useState<Map<string, string[]>>(new Map());
 
-    //State to store a map of selected custom tags with the key being the section they belong and the value being an array of the tags selected from that section
-    const [selectedCustomTags, setSelectedCustomTags] = useState<Map<string, string[]>>(new Map());
+    //State to store selected student custom tags in "[TAG NAME] - [TAG CATEGORY]" format
+    const [selectedStudentCustomTags, setSelectedStudentCustomTags] = useState<string[]>([]);
+
+    //State to store selected teacher custom tags in "[TAG NAME] - [TAG CATEGORY]" format
+    const [selectedTeacherCustomTags, setSelectedTeacherCustomTags] = useState<string[]>([]);
 
     //State to store student ID(s) from teacher side
     const [teacherObsStudentId, setTeacherObsStudentId] = useState('');
@@ -105,8 +108,17 @@ export default function ObservationScreen() {
     //Constant List of Behavior Tag Classifications
     const behaviorTagClassifications = ["By Student", "At Front", "On LMS", "Walking"];
 
-    //List of Behavior - By Student Tags that can be updated
-    let behaviorByStudentTags = ["Directs to resources", "Directs to peer help", "Direct to tasks", "Manages behavior", "Mistakes are normal", "Open-ended questions", "Prompts for Debugging", "Stretch goals", "Teaches CT concept", "Technical support"];
+    //List of Behavior - At Front Tags 
+    const behaviorAtFrontTags = ["Open-ended questions", "Direct to tasks", "Directs to resources", "Models struggle", "Teaches CT concept", "Manages behavior", "Stretch goals", "Reminds to save code", "Encourages collaboration", "Encourages participation", "Organizes peer tutors", "Organizes paired programming", "Encourages help-seeking", "Teaches collaboration", "Normalizes mistakes", "Connects to student interest"];
+
+    //List of Behavior - On LMS Tags
+    const behaviorOnLMSTags = ["Directs to tasks", "Directs to resources", "Monitors progress", "Models struggle", "Models action in IDE", "Organizes peer tutors", "Organizes paired programming", "Technical support"];
+
+    //List of Behavior - Walking Tags
+    const behaviorWalkingTags = ["Open-ended questions", "Directs to resources", "Encourages collaboration", "Encourages participation", "Manages behavior", "Monitors progress", "Organizes peer tutors", "Organizes paired programming", "Stretch goals", "Reminds to save code", "Normalizes mistakes"];
+
+    //List of Behavior - By Student Tags
+    const behaviorByStudentTags = ["Directs to resources", "Directs to peer help", "Direct to tasks", "Manages behavior", "Mistakes are normal", "Open-ended questions", "Prompts for Debugging", "Stretch goals", "Teaches CT concept", "Technical support"];
 
     //List of Function Tags
     let functionTags = ["CT Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
@@ -140,26 +152,28 @@ export default function ObservationScreen() {
         }
       };
   
-    //Helper function to toggle if a custom tag is selected or not
-    const toggleCustomTag = (category: string, tag: string) => {
-        setSelectedCustomTags(prev => {
-            const newMap = new Map(prev);
-            const selectedForCategory = newMap.get(category) || [];
-        
-            if (selectedForCategory.includes(tag)) {
-            // Remove tag from selected list
-            newMap.set(
-                category,
-                selectedForCategory.filter(t => t !== tag)
-            );
-            } else {
-            // Add tag to selected list
-            newMap.set(category, [...selectedForCategory, tag]);
-            }
-        
-            return newMap;
-        });
+    //Helper function to toggle if a student custom tag is selected or not and handle backend operations
+    const toggleStudentCustomTag = async (tag: string) => {
+        //Toggle tag in array
+        setSelectedStudentCustomTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
+
+        //Log press of tag in backend if tag is in custom tags list
+        if (!selectedStudentCustomTags.includes(tag)) {
+            await handleStudentObservationSingleSubmit("custom_tags", tag);
+        }
     }
+
+    //Helper function to toggle if a student custom tag is selected or not and handle backend operations
+    const toggleTeacherCustomTag = async (tag: string) => {
+        //Toggle tag in array
+        setSelectedTeacherCustomTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
+
+        //Log press of tag in backend if tag is in custom tags list
+        if (!selectedTeacherCustomTags.includes(tag)) {
+            await handleTeacherObservationSingleSubmit("custom_tags", tag);
+        }
+    }
+
     //Helper function to add a new entry in the customTags map
     const addCustomTag = (key: string, value: string) => {
         setCustomTags(prevTags => {
@@ -168,6 +182,19 @@ export default function ObservationScreen() {
             newCustomTags.set(key, [...existing, value]);
             return newCustomTags;
         });
+    }
+
+    //Helper function to determine and return the constant list of behavior tags corresponding to the current behavior tab selected
+    const getBehaviorTags = () => {
+        if (behaviorClass === "By Student") {
+            return behaviorByStudentTags;
+        } else if (behaviorClass === "At front") {
+            return behaviorAtFrontTags;
+        } else if (behaviorClass === "On LMS") {
+            return behaviorOnLMSTags
+        } else {
+            return behaviorWalkingTags;
+        }
     }
 
     //Helper function to send teacher observation info to server when the form is officially submitted
@@ -359,16 +386,16 @@ export default function ObservationScreen() {
                         <div className="relative -top-[8px]">
                             <div className="py-3 px-[24px] w-full bg-[var(--light-blue-accent)]">
                                 <div className="flex gap-2 flex-wrap items-center">
-                                    {behaviorByStudentTags.map((tag, index) => (
-                                        <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => { setSelectedBehaviorTags((prevTags: string[]) => toggleStringInArray(prevTags, tag)); !selectedBehaviorTags.includes(tag) ? handleTeacherObservationSingleSubmit('behavior_tags', tag) : null; }} className={`text-sm px-2 py-2 rounded-xl ${selectedBehaviorTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
+                                    {getBehaviorTags().map((tag, index) => (
+                                        <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => { setSelectedBehaviorTags((prevTags: string[]) => toggleStringInArray(prevTags, `${tag} - ${behaviorClass}`)); !selectedBehaviorTags.includes(`${tag} - ${behaviorClass}`) ? handleTeacherObservationSingleSubmit('behavior_tags', `${tag} - ${behaviorClass}`) : null; }} className={`text-sm px-2 py-2 rounded-xl ${selectedBehaviorTags.includes(`${tag} - ${behaviorClass}`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
                                     ))}
                                     {/* Custom Behavior Tags */}
-                                    {(customTags.get('behavior_tags') || []).map((tag, index) => (
+                                    {(customTags.get(`behavior_tags - ${behaviorClass}`) || []).map((tag, index) => (
                                         <button
                                         key={`custom-${index}`}
-                                        onClick={() => toggleCustomTag('behavior_tags', tag)}
+                                        onClick={() => toggleTeacherCustomTag(`${tag} - Behavior (${behaviorClass})`)}
                                         style={{cursor: 'pointer'}}
-                                        className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${(selectedCustomTags.get('behavior_tags') || []).includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
+                                        className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(`${tag} - Behavior (${behaviorClass})`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
                                         >
                                         {tag}
                                         </button>
@@ -376,7 +403,7 @@ export default function ObservationScreen() {
                                     <button onClick={() => setAddTagModalString('behavior')} style={{cursor: 'pointer'}} className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
                                     {/* Show Modal only if timeModalOpen is true */}
                                     { AddTagModalString == 'behavior' && (
-                                        <AddTagModal modalHeader={"Add Behavior Tag"} tagSection={"behavior_tags"} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
+                                        <AddTagModal modalHeader={"Add Behavior Tag"} tagSection={`behavior_tags - ${behaviorClass}`} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
                                     )}
                                     
                                 </div>
@@ -400,8 +427,8 @@ export default function ObservationScreen() {
                                 <button
                                 key={`custom-${index}`}
                                 style={{cursor: 'pointer'}}
-                                onClick={() =>toggleCustomTag('function_tags', tag)}
-                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${(selectedCustomTags.get('function_tags') || []).includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
+                                onClick={() => toggleTeacherCustomTag(`${tag} - Function`)}
+                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(`${tag} - Function`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
                                 >
                                 {tag}
                                 </button>
@@ -425,8 +452,8 @@ export default function ObservationScreen() {
                                 <button
                                 key={`custom-${index}`}
                                 style={{cursor: 'pointer'}}
-                                onClick={() =>toggleCustomTag('structure_tags', tag)}
-                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${(selectedCustomTags.get('structure_tags') || []).includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
+                                onClick={() => toggleTeacherCustomTag(`${tag} - Structure`)}
+                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(`${tag} - Structure`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
                                 >
                                 {tag}
                                 </button>
@@ -484,8 +511,8 @@ export default function ObservationScreen() {
                                 <button
                                 key={`custom-${index}`}
                                 style={{cursor: 'pointer'}}
-                                onClick={() =>toggleCustomTag('student_tags', tag)}
-                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${(selectedCustomTags.get('student_tags') || []).includes(tag) ? 'bg-[var(--green-accent)] text-white' : 'bg-white' }`}
+                                onClick={() => toggleStudentCustomTag(`${tag} - Behavior`)}
+                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStudentCustomTags.includes(`${tag} - Behavior`) ? 'bg-[var(--green-accent)] text-white' : 'bg-white' }`}
                                 >
                                 {tag}
                                 </button>

@@ -7,6 +7,7 @@ export interface TeacherObservationData {
     behavior_tags?: string[];
     function_tags?: string[];
     structure_tags?: string[];
+    custom_tags?: string[];
     submitted_by_user?: boolean;
     recording?: boolean;
     note?: string;
