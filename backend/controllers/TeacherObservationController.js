@@ -17,6 +17,7 @@ exports.createTeacherObservation = async (req, res) => {
       behavior_tags,
       structure_tags,
       function_tags,
+      custom_tags,
       submitted_by_user,
       single_click,
       recording,
@@ -26,12 +27,11 @@ exports.createTeacherObservation = async (req, res) => {
     // Ensure all required fields are given if this is not a single click observation
     if (
       !single_click &&
-      (!note ||
-      !session_id ||
-      !student_id ||
+      (!session_id ||
       !Array.isArray(behavior_tags) ||
       !Array.isArray(structure_tags) ||
-      !Array.isArray(function_tags))
+      !Array.isArray(function_tags) ||
+      !Array.isArray(custom_tags))
     ) {
       //Alert frontend if any fields are missing
       console.log('problem');
@@ -48,6 +48,7 @@ exports.createTeacherObservation = async (req, res) => {
       behavior_tags,
       structure_tags,
       function_tags,
+      custom_tags,
       submitted_by_user: submitted_by_user ?? false, // default false if undefined
       recording: recording == null ? null : !!recording,
       picture_attachments: picture_attachments ?? null,

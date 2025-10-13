@@ -13,6 +13,7 @@ exports.createStudentObservation = async (req, res) => {
         student_id,
         behavior_tags,
         affect,
+        custom_tags,
         submitted_by_user,
         single_click,
         recording,
@@ -22,7 +23,7 @@ exports.createStudentObservation = async (req, res) => {
       console.log(req.body);
   
       // Basic validation
-      if ( !single_click && (!student_id || !session_id || !submitted_by_user || !Array.isArray(behavior_tags) || !Array.isArray(affect))) {
+      if ( !single_click && (!session_id || !Array.isArray(behavior_tags) || !Array.isArray(affect) || !Array.isArray(custom_tags))) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
@@ -35,6 +36,7 @@ exports.createStudentObservation = async (req, res) => {
         student_id,
         behavior_tags,
         affect,
+        custom_tags,
         submitted_by_user: submitted_by_user ?? false, // default false if undefined
         recording: recording == null ? null : !!recording,
         picture_attachments: picture_attachments ?? null,

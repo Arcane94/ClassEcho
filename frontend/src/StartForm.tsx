@@ -214,8 +214,10 @@ export default function StartForm() {
             </div>
 
             <footer className="fixed bottom-0 left-0 w-screen flex items-center justify-end bg-[var(--grey-accent)] pr-[24px] py-2.5 md:hidden">
-                <button className="mr-[10px] t-[16px]" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>Start Observation</button>
-                <ArrowRight className="w-[24px] h-[24px] flex-shrink-0"/>
+                <div className="flex" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>
+                    <button className="mr-[10px] t-[16px]" style={{ cursor: 'pointer' }}>Start Observation</button>
+                    <ArrowRight className="w-[24px] h-[24px] flex-shrink-0" style={{ cursor: 'pointer' }}/>
+                </div>
             </footer>
         </>
     )

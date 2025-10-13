@@ -5,6 +5,7 @@ export interface StudentObservationData {
     student_id?: string;
     behavior_tags?: string[];
     affect?: string[];
+    custom_tags?: string[],
     submitted_by_user?: boolean;
     recording?: boolean;
     note?: string;
