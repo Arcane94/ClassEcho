@@ -27,9 +27,7 @@ exports.createTeacherObservation = async (req, res) => {
     // Ensure all required fields are given if this is not a single click observation
     if (
       !single_click &&
-      (!note ||
-      !session_id ||
-      !student_id ||
+      (!session_id ||
       !Array.isArray(behavior_tags) ||
       !Array.isArray(structure_tags) ||
       !Array.isArray(function_tags) ||

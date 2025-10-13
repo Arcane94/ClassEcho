@@ -23,7 +23,7 @@ exports.createStudentObservation = async (req, res) => {
       console.log(req.body);
   
       // Basic validation
-      if ( !single_click && (!student_id || !session_id || !submitted_by_user || !Array.isArray(behavior_tags) || !Array.isArray(affect) || !Array.isArray(custom_tags))) {
+      if ( !single_click && (!session_id || !Array.isArray(behavior_tags) || !Array.isArray(affect) || !Array.isArray(custom_tags))) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       

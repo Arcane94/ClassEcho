@@ -8,6 +8,7 @@ import stopRecordSvg from "./assets/images/stop_recording.svg";
 import { useNavigate } from "react-router-dom";
 import { getCurrentTimeFormatted } from "./utils/getCurrentTimeFormatted";
 import AddTagModal from "./components/AddTagModal";
+import FadeOutText from "./components/FadeOutText";
 import { useSearchParams } from "react-router-dom";
 import { fetchSessionById } from "./utils/fetchSessionById";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
@@ -208,6 +209,7 @@ export default function ObservationScreen() {
                 behavior_tags: selectedBehaviorTags,
                 function_tags: selectedFunctionTags,
                 structure_tags: selectedStructureTags,
+                custom_tags: selectedTeacherCustomTags,
                 submitted_by_user: true,
                 note: extraTeacherNote,
                 //New tag sent only to controller in server to loosen error-checking for single click observations
@@ -218,7 +220,7 @@ export default function ObservationScreen() {
             //Include recording flag if true
             if (recording) {
                 teacherObsData.recording = true;
-            } else if (!recording) {
+            } else if (recording === false) {
                 teacherObsData.recording = false;
             }
 
@@ -263,6 +265,7 @@ export default function ObservationScreen() {
                 student_id: studentObsStudentId,
                 behavior_tags: selectedStudentTags,
                 affect: selectedAffectTags,
+                custom_tags: selectedStudentCustomTags,
                 submitted_by_user: true,
                 note: extraStudentNote,
                 //New tag sent only to controller in server to loosen error-checking for single click observations
@@ -273,7 +276,7 @@ export default function ObservationScreen() {
             //Add recording tag if it is true
             if (recording) {
                 studentObsData.recording = true;
-            } else if (!recording) {
+            } else if (recording === false) {
                 studentObsData.recording = false;
             }
             //Call util function with formatted data
@@ -347,7 +350,8 @@ export default function ObservationScreen() {
                 await handleTeacherObservationSubmit(false);
             } else {
                 await handleStudentObservationSubmit(false);
-            }        
+            }
+            setObservationTime(getCurrentTimeFormatted());        
         } catch (error) {
             console.error('Failed to submit observation', error);
         }
@@ -556,7 +560,7 @@ export default function ObservationScreen() {
                     <div className="mx-[24px] bg-[#F8F9FA] flex items-center gap-2 justify-between p-2 rounded-md mt-2 mb-6">
                         <div className="flex-1 max-w-[500px]">
                             {observationTime && 
-                                <p className="text-[var(--green-accent)] text-sm">{`Observation recorded at ${observationTime}.`}</p>
+                                <FadeOutText text={`Observation recorded at ${observationTime}.`} className="text-[var(--green-accent)] text-sm" />
                             }
                         </div>
                         <div>
