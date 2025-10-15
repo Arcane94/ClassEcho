@@ -10,6 +10,7 @@ export interface StudentObservationData {
     recording?: boolean;
     note?: string;
     picture_attachments?: string;
+    on_task?: boolean;
     //New tag sent only to controller in server to loosen error-checking for single click observations
     single_click?: boolean; 
   }

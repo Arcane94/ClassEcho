@@ -48,6 +48,7 @@ CREATE TABLE student_observation (
 	submitted_by_user BOOLEAN DEFAULT FALSE,
 	recording BOOLEAN DEFAULT NULL,
     note TEXT,
+    on_task BOOLEAN,
     picture_attachments BLOB,
     CONSTRAINT fk_student_session FOREIGN KEY (session_id) REFERENCES session(session_id)
 );
