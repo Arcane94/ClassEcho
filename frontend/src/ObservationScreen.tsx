@@ -1,7 +1,8 @@
 import {ArrowLeft} from "lucide-react";
 import { useState, useEffect } from "react";
 import SmallTextForm from "./components/SmallTextForm";
-import sendFormSvg from "./assets/images/send_form.svg";
+import studentSendFormSvg from "./assets/images/student_send_form.svg";
+import teacherSendFormSvg from "./assets/images/teacher_send_form.svg";
 import invalidSendFormSvg from "./assets/images/invalid_send_form.svg";
 import startRecordPng from "./assets/images/start_recording.png";
 import stopRecordSvg from "./assets/images/stop_recording.svg";
@@ -133,6 +134,9 @@ export default function ObservationScreen() {
     //Session id pulled from url (used for server call)
     const sessionId = searchParams.get('sessionId');
 
+    //Tick counter that allows observation time to have a new key when updated
+    const [observationTick, setObservationTick] = useState(0);
+
     //UseEffect statement to be triggered on component load that uses sessionId to pull additional session info from server
     useEffect(() => {
         if (sessionId) {
@@ -153,6 +157,26 @@ export default function ObservationScreen() {
         }
       };
   
+    //Helper function to clear all user selections when a observation is submitted
+    const clearUserSelections = () => {
+        if (observingTeacher) {
+            setExtraTeacherNote('');
+            setBehaviorClass('By Student');
+            setAddNoteOpen(false);
+            setSelectedBehaviorTags([]);
+            setSelectedFunctionTags([]);
+            setSelectedStructureTags([]);
+            setSelectedTeacherCustomTags([]);
+            setTeacherObsStudentId('');
+        } else {
+            setExtraStudentNote('');
+            setSelectedStudentTags([]);
+            setSelectedAffectTags([]);
+            setIsStudentOnTask(true);
+            setStudentObsStudentId('');
+            setSelectedStudentCustomTags([]);
+        }
+    }
     //Helper function to toggle if a student custom tag is selected or not and handle backend operations
     const toggleStudentCustomTag = async (tag: string) => {
         //Toggle tag in array
@@ -226,6 +250,8 @@ export default function ObservationScreen() {
 
             //Call util function with formatted data
             await createTeacherObservation(teacherObsData);
+            //Clear selected forms
+            clearUserSelections();
         } catch (error) {
             console.error('Failed to submit teacher observation', error);
         }
@@ -281,6 +307,8 @@ export default function ObservationScreen() {
             }
             //Call util function with formatted data
             await createStudentObservation(studentObsData);
+            //Clear selected forms
+            clearUserSelections();
         } catch (error) {
             console.error('Failed to submit student observation', error);
         }
@@ -351,7 +379,8 @@ export default function ObservationScreen() {
             } else {
                 await handleStudentObservationSubmit(false);
             }
-            setObservationTime(getCurrentTimeFormatted());        
+            setObservationTime(getCurrentTimeFormatted());
+            setObservationTick(prev => prev + 1);        
         } catch (error) {
             console.error('Failed to submit observation', error);
         }
@@ -560,14 +589,14 @@ export default function ObservationScreen() {
                     <div className="mx-[24px] bg-[#F8F9FA] flex items-center gap-2 justify-between p-2 rounded-md mt-2 mb-6">
                         <div className="flex-1 max-w-[500px]">
                             {observationTime && 
-                                <FadeOutText text={`Observation recorded at ${observationTime}.`} className="text-[var(--green-accent)] text-sm" />
+                                <FadeOutText key={`${observationTick}`} delay={5000} text={`Observation recorded at ${observationTime}.`} className="text-[var(--green-accent)] text-sm" />
                             }
                         </div>
                         <div>
                             {(!isRecordingTeacherObs && !isRecordingStudentObs) ?
                                 (   <div className="flex gap-2">
                                         <img src={startRecordPng} alt="Start Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={handleStartRecordingObservation}/>
-                                        <img src={sendFormSvg} alt="Send Form Button" onClick={() => { observingTeacher ? handleTeacherObservationSubmit() : handleStudentObservationSubmit(); setObservationTime(getCurrentTimeFormatted())}} style={{cursor: 'pointer'}} className="w-[36px] h-[36px]"/>
+                                        <img src={observingTeacher ? teacherSendFormSvg : studentSendFormSvg} alt="Send Form Button" onClick={() => { observingTeacher ? handleTeacherObservationSubmit() : handleStudentObservationSubmit(); setObservationTick(prev => prev + 1); setObservationTime(getCurrentTimeFormatted())}} style={{cursor: 'pointer'}} className="w-[36px] h-[36px]"/>
     
                                     </div>
                                 ) :  (
