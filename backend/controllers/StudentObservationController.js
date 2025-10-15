@@ -17,6 +17,7 @@ exports.createStudentObservation = async (req, res) => {
         submitted_by_user,
         single_click,
         recording,
+        on_task,
         picture_attachments,
       } = req.body;
   
@@ -39,6 +40,7 @@ exports.createStudentObservation = async (req, res) => {
         custom_tags,
         submitted_by_user: submitted_by_user ?? false, // default false if undefined
         recording: recording == null ? null : !!recording,
+        on_task,
         picture_attachments: picture_attachments ?? null,
       };
 

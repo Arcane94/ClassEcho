@@ -18,6 +18,7 @@ exports.create = async function (info) {
     // Record flag
     recording: (info.recording === undefined ? null : info.recording),    // Notes + optional attachments (e.g., image keys/URLs).
     note: info.note ?? null,
+    on_task: info.on_task ?? null,
     picture_attachments: info.picture_attachments ? (Buffer.isBuffer(info.picture_attachments) ? info.picture_attachments
           : Buffer.from(String(info.picture_attachments), 'base64')) : null
   };

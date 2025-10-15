@@ -2,34 +2,56 @@ import React, { useEffect, useState } from 'react';
 
 interface FadeOutTextProps {
   text: string;
-  delay?: number; // optional, defaults to 5 seconds
-  duration?: number; // optional fade duration (ms)
+  delay?: number; // how long before text clears
+  className?: string;
   style?: React.CSSProperties;
-  className: string;
 }
 
 const FadeOutText: React.FC<FadeOutTextProps> = ({
   text,
   delay = 5000,
-  duration = 1000,
+  className = '',
   style = {},
-  className='',
 }) => {
-  const [visible, setVisible] = useState(true);
+  const [displayText, setDisplayText] = useState('');
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), delay);
-    return () => clearTimeout(timer);
+    if (!text) return;
+    
+    // immediately show new text
+    setDisplayText(text);
+    setIsVisible(true);
+    
+    // start fade-out timer (fade starts 500ms before clearing)
+    const fadeTimer = setTimeout(() => {
+      setIsVisible(false);
+    }, delay - 500);
+
+    // clear text after fade completes
+    const clearTimer = setTimeout(() => {
+      setDisplayText('');
+    }, delay);
+    
+    // cleanup on next text change or unmount
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(clearTimer);
+    };
   }, [text, delay]);
 
-  const fadeStyle: React.CSSProperties = {
-    opacity: visible ? 1 : 0,
-    transition: `opacity ${duration}ms ease-in-out`,
-    ...style,
-  };
-
-  return <p className={className} style={fadeStyle}>{text}</p>;
+  return (
+    <p 
+      className={className} 
+      style={{
+        ...style,
+        opacity: isVisible ? 1 : 0,
+        transition: 'opacity 0.5s ease-out'
+      }}
+    >
+      {displayText}
+    </p>
+  );
 };
 
 export default FadeOutText;
