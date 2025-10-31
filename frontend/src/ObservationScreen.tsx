@@ -16,6 +16,8 @@ import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
 import { createTeacherObservation } from "./utils/createTeacherObservation";
 import { createStudentObservation } from "./utils/createStudentObservation";
 import type { SessionData } from './utils/fetchSessionById';
+import type { StudentObservationData } from './utils/createStudentObservation';
+import type { TeacherObservationData } from './utils/createTeacherObservation';
 
 
 //Affect Icon Svg Imports 
@@ -68,9 +70,6 @@ export default function ObservationScreen() {
     //State to store selected behavior tag class
     const [behaviorClass, setBehaviorClass] = useState('By Student');
 
-    //State to store if user is adding a note on the teacher side
-    const [addNoteOpen, setAddNoteOpen] = useState(false);
-
     //State to store selected student tag
     const [selectedStudentTags, setSelectedStudentTags] = useState<string[]>([]);
 
@@ -102,10 +101,10 @@ export default function ObservationScreen() {
     const [studentObsStudentId, setStudentObsStudentId] = useState('');
 
     //Constant List of Student Emotion Affects
-    const studentAffects = ["Excited", "Suprised", "Happy", "Relaxed", "Tired", "Bored", "Sad", "Confused", "Frustrated", "Angry"];
+    const studentAffects = ["Excited", "Suprised", "Happy", "Relaxed", "Tired", "Bored", "Sad", "Confused", "Frustrated", "Angry", "Focused", "Unfocused"];
 
     //Constant List of Student Emotion Affect Icons
-    const studentAffectIcons = [excitedAffectIcon, excitedAffectIcon, happyAffectIcon, relaxedAffectIcon, tiredAffectIcon, boredAffectIcon, sadAffectIcon, confusedAffectIcon, frustratedAffectIcon, angryAffectIcon];
+    const studentAffectIcons = [excitedAffectIcon, excitedAffectIcon, happyAffectIcon, relaxedAffectIcon, tiredAffectIcon, boredAffectIcon, sadAffectIcon, confusedAffectIcon, frustratedAffectIcon, angryAffectIcon, happyAffectIcon, boredAffectIcon];
 
     //Constant List of Behavior Tag Classifications
     const behaviorTagClassifications = ["By Student", "At Front", "On LMS", "Walking"];
@@ -123,7 +122,7 @@ export default function ObservationScreen() {
     const behaviorByStudentTags = ["Directs to resources", "Directs to peer help", "Direct to tasks", "Manages behavior", "Mistakes are normal", "Open-ended questions", "Prompts for Debugging", "Stretch goals", "Teaches CT concept", "Technical support"];
 
     //List of Function Tags
-    let functionTags = ["CT Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
+    let functionTags = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
 
     //List of Structure Tags
     let structureTags = ["Activity", "Help-seeking queue", "LMS", "Rules and Norms", "Snap!"];
@@ -136,6 +135,12 @@ export default function ObservationScreen() {
 
     //Tick counter that allows observation time to have a new key when updated
     const [observationTick, setObservationTick] = useState(0);
+
+    //List of database entries for student observations that have not yet been sent to backend due to connectivity issues
+    const [waitingStudentLogs, setWaitingStudentLogs] = useState<StudentObservationData[]>([]);
+
+    //List of database entries for teacher observations that have not yet been sent to backend due to connectivity issues
+    const [waitingTeacherLogs, setWaitingTeacherLogs] = useState<TeacherObservationData[]>([]);
 
     //UseEffect statement to be triggered on component load that uses sessionId to pull additional session info from server
     useEffect(() => {
@@ -162,7 +167,6 @@ export default function ObservationScreen() {
         if (observingTeacher) {
             setExtraTeacherNote('');
             setBehaviorClass('By Student');
-            setAddNoteOpen(false);
             setSelectedBehaviorTags([]);
             setSelectedFunctionTags([]);
             setSelectedStructureTags([]);
@@ -395,8 +399,8 @@ export default function ObservationScreen() {
                 <p className="col-span-7 text-center text-base">{`Start: ${sessionData?.local_time ? formatToMonthDayHourMinute(sessionData.local_time) : 'No time available'}`}</p>
             </header>
 
-            <div className="flex items-center justify-center w-full">
-                <div className="max-w-[800px]">
+            <div className="w-full flex justify-center items-start min-h-[calc(100vh-51px)] overflow-hidden">
+                <div className="max-w-[800px] w-full">
                     <div className="mt-[51px] w-full flex items-center">
                         <button onClick={() => !isRecordingStudentObs ? setObservingTeacher(true) : null} className={`text-xl w-1/2 py-3  ${isRecordingStudentObs ? 'bg-gray-300 text-black' : observingTeacher ? 'bg-[var(--accent-color)] text-white' : 'bg-[var(--light-blue-accent)] text-black'}`} style={{ cursor: isRecordingStudentObs ? 'not-allowed' : 'pointer'}}>Teacher</button>
                         <button onClick={() => !isRecordingTeacherObs ? setObservingTeacher(false) : null} className={`text-xl w-1/2 py-3  ${isRecordingTeacherObs ? 'bg-gray-300 text-black' : !observingTeacher ? 'bg-[var(--green-accent)] text-white' : 'bg-[var(--light-green-accent)] text-black'}`} style={{ cursor: isRecordingTeacherObs ? 'not-allowed' : 'pointer'}}>Student</button>
@@ -406,7 +410,7 @@ export default function ObservationScreen() {
                     {observingTeacher ? 
                         (
                         <>
-                        <h1 className="text-xl ml-[24px] mt-4">Behavior</h1>
+                        <h1 className="text-xl ml-[24px] mt-4">{`Behavior (What?)`}</h1>
 
                         {/* Behavior Tag Options */}
                         <div className="ml-[24px] mr-[24px] mt-3 w-full flex gap-2 flex-wrap items-start">
@@ -449,7 +453,7 @@ export default function ObservationScreen() {
                             </div>
                         </div>
 
-                        <h2 className="text-xl ml-[24px] mt-4">Function</h2>
+                        <h2 className="text-xl ml-[24px] mt-4">{`Function (Why?)`}</h2>
                         
                         {/*Function Tag Options */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
@@ -474,7 +478,7 @@ export default function ObservationScreen() {
                             )}
                         </div>
 
-                        <h3 className="text-xl ml-[24px] mt-4">Structure</h3>
+                        <h3 className="text-xl ml-[24px] mt-4">{`Structure (With what?)`}</h3>
                         
                         {/*Structure Tag Options */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
@@ -498,28 +502,18 @@ export default function ObservationScreen() {
                                 <AddTagModal modalHeader={"Add Structure Tag"} tagSection={"structure_tags"} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
                             )}
                         </div>
-                        {/*Add Note Header */}
-                        {!addNoteOpen ? (
-                            <button onClick={() => setAddNoteOpen(true)} style={{cursor: 'pointer'}} className="mx-[24px] text-l text-gray-300 mt-3">+ Add Note</button>
-                        ) : (
-                            <button onClick={() => setAddNoteOpen(false)} style={{cursor: 'pointer'}} className="mx-[24px] text-l text-gray-300 mt-3">- Cancel Note</button>
-                        )
-                        }
-
-                        {/*Add Note Text Input if Selected */}
-                        {addNoteOpen &&
-                            <div className={`mx-[24px] mt-3`}>
-                                <SmallTextForm 
-                                    label="Extra Notes"
-                                    id="extraTeacherNotes"
-                                    name="extraTeacherNotes"
-                                    onChange={(e) => setExtraTeacherNote(e.target.value)}
-                                    value={extraTeacherNote}
-                                    placeholder=""
-                                    className="h-[98px]"
-                                />
-                            </div>
-                        }
+                        {/* Add Note Text Input */}
+                        <div className={`mx-[24px] mt-3`}>
+                            <SmallTextForm 
+                                label="Extra Notes"
+                                id="extraTeacherNotes"
+                                name="extraTeacherNotes"
+                                onChange={(e) => setExtraTeacherNote(e.target.value)}
+                                value={extraTeacherNote}
+                                placeholder=""
+                                className="h-[98px]"
+                            />
+                        </div>
                     </>
                     ) : (
                         <>

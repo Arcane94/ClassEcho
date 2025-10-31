@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "../config";
+
 // Defines the call to create a new student observation in database
 
 export interface StudentObservationData {
@@ -18,7 +20,7 @@ export interface StudentObservationData {
   //Calls the server and sends all the data needed to create a new student observation
   export async function createStudentObservation(data: StudentObservationData) {
     try {
-      const response = await fetch('http://localhost:3011/observations/student', {
+      const response = await fetch(`${API_BASE_URL}/observations/student`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
