@@ -1,0 +1,26 @@
+import { API_BASE_URL } from "../config";
+
+//exportable function that checks if the user is currently online
+export function isUserOnline() {
+    //Check navigator
+    return navigator.onLine;
+}
+
+//exportable function that calls the server check API route to see if server is currently online
+export async function isServerOnline() {
+    try {
+        //Try to call GET server check route
+        const response = await fetch(`${API_BASE_URL}/sessions/check`, {
+            method: "GET",
+            //Make as light-weight as possible since nothing is actually being sent
+            cache: "no-cache",
+        });
+
+        return response.ok;
+    } catch(err) {
+        //Report error
+        console.error("Error Checking Server Status: ", err);
+        //Return false, server is offline
+        return false;
+    }
+}

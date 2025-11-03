@@ -16,8 +16,7 @@ import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
 import { createTeacherObservation } from "./utils/createTeacherObservation";
 import { createStudentObservation } from "./utils/createStudentObservation";
 import type { SessionData } from './utils/fetchSessionById';
-import type { StudentObservationData } from './utils/createStudentObservation';
-import type { TeacherObservationData } from './utils/createTeacherObservation';
+import OfflineIndicator from "./components/OfflineIndicator";
 
 
 //Affect Icon Svg Imports 
@@ -30,6 +29,8 @@ import happyAffectIcon from "./assets/images/happy_affect.svg";
 import relaxedAffectIcon from "./assets/images/relaxed_affect.svg";
 import tiredAffectIcon from "./assets/images/tired_affect.svg";
 import sadAffectIcon from "./assets/images/sad_affect.svg";
+
+import { storeObservationLocally, offlineLogging } from "./utils/offlineQueue";
 
 //Defines the behavior and design of the screen allowing users to make observations on both teachers an students
 export default function ObservationScreen() {
@@ -136,12 +137,6 @@ export default function ObservationScreen() {
     //Tick counter that allows observation time to have a new key when updated
     const [observationTick, setObservationTick] = useState(0);
 
-    //List of database entries for student observations that have not yet been sent to backend due to connectivity issues
-    const [waitingStudentLogs, setWaitingStudentLogs] = useState<StudentObservationData[]>([]);
-
-    //List of database entries for teacher observations that have not yet been sent to backend due to connectivity issues
-    const [waitingTeacherLogs, setWaitingTeacherLogs] = useState<TeacherObservationData[]>([]);
-
     //UseEffect statement to be triggered on component load that uses sessionId to pull additional session info from server
     useEffect(() => {
         if (sessionId) {
@@ -152,6 +147,35 @@ export default function ObservationScreen() {
             })
         }
     }, [sessionId]);
+
+    //UseEffect to monitor local logs that have been stored when service is offline and send all logs to server when connection is restored
+    useEffect(() => {
+        //Safety flag to avoid changes on unmount
+        let isMounted = true;
+
+        //Async function to use offlineLogging method
+        const sendLogs = async () => {
+            if (!isMounted) return;
+
+            try {
+                await offlineLogging();
+            } catch (err) {
+                console.error("Error in offline logging:", err);
+            }
+        };
+
+        //Run function immediately
+        sendLogs();
+
+        //Set time interval
+        const interval = setInterval(sendLogs, 15000);
+
+        //Cleanup unmount
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        }
+    })
 
     //Helper function that toggles a string in a useState array for selecting tags
     const toggleStringInArray = (array: string[], item: string): string[] => {
@@ -228,118 +252,126 @@ export default function ObservationScreen() {
 
     //Helper function to send teacher observation info to server when the form is officially submitted
     const handleTeacherObservationSubmit = async (recording?: boolean) => {
+        //Built data to send to util function
+        const teacherObsData: any = {
+            session_id: Number(sessionId),
+            //Ensure difference between teacher and student form ids
+            student_id: teacherObsStudentId,
+            behavior_tags: selectedBehaviorTags,
+            function_tags: selectedFunctionTags,
+            structure_tags: selectedStructureTags,
+            custom_tags: selectedTeacherCustomTags,
+            submitted_by_user: true,
+            note: extraTeacherNote,
+            //New tag sent only to controller in server to loosen error-checking for single click observations
+            single_click: false,
+            recording: null,
+        };
+
+        //Include recording flag if true
+        if (recording) {
+            teacherObsData.recording = true;
+        } else if (recording === false) {
+            teacherObsData.recording = false;
+        }
         try {
-            //Built data to send to util function
-            const teacherObsData: any = {
-                session_id: Number(sessionId),
-                //Ensure difference between teacher and student form ids
-                student_id: teacherObsStudentId,
-                behavior_tags: selectedBehaviorTags,
-                function_tags: selectedFunctionTags,
-                structure_tags: selectedStructureTags,
-                custom_tags: selectedTeacherCustomTags,
-                submitted_by_user: true,
-                note: extraTeacherNote,
-                //New tag sent only to controller in server to loosen error-checking for single click observations
-                single_click: false,
-                recording: null,
-            };
-
-            //Include recording flag if true
-            if (recording) {
-                teacherObsData.recording = true;
-            } else if (recording === false) {
-                teacherObsData.recording = false;
-            }
-
             //Call util function with formatted data
             await createTeacherObservation(teacherObsData);
             //Clear selected forms
             clearUserSelections();
         } catch (error) {
             console.error('Failed to submit teacher observation', error);
+            console.log('Adding Teacher Observation to waiting logs.');
+            storeObservationLocally(teacherObsData);
+            //ensure user selections are still cleared
+            clearUserSelections();
         }
     }
 
     //Helper function to send teacher observation info to server when a single new tag is clicked
     const handleTeacherObservationSingleSubmit = async (tagCategory: string, tagText: string) => {
+        //add tag text to array to meet server standards 
+        const singleTagArray = [tagText];
+
+        //Built data to send to util function
+        const teacherObsData: any = {
+            session_id: Number(sessionId),
+            //Ensure difference between teacher and student form ids
+            student_id: teacherObsStudentId,
+            [tagCategory]: singleTagArray,
+            submitted_by_user: false,
+            single_click: true,
+            recording: null,
+        };
         try {
-            //add tag text to array to meet server standards 
-            const singleTagArray = [tagText];
-
-            //Built data to send to util function
-            const teacherObsData: any = {
-                session_id: Number(sessionId),
-                //Ensure difference between teacher and student form ids
-                student_id: teacherObsStudentId,
-                [tagCategory]: singleTagArray,
-                submitted_by_user: false,
-                single_click: true,
-                recording: null,
-            };
-
             //Call util function with formatted data
             await createTeacherObservation(teacherObsData);
         } catch (error) {
             console.error('Failed to submit teacher observation', error);
+            console.log('Adding Teacher Single Submit Observation to waiting logs.')
+            storeObservationLocally(teacherObsData);
         }
     }
 
     //Helper function to send student observation info to server when the form is officially submitted
     const handleStudentObservationSubmit = async (recording?: boolean) => {
-        try {
-            //Built data to send to util function
-            const studentObsData: any = {
-                session_id: Number(sessionId),
-                //Ensure difference between teacher and student form ids
-                student_id: studentObsStudentId,
-                behavior_tags: selectedStudentTags,
-                affect: selectedAffectTags,
-                custom_tags: selectedStudentCustomTags,
-                submitted_by_user: true,
-                note: extraStudentNote,
-                //New tag sent only to controller in server to loosen error-checking for single click observations
-                single_click: true,
-                recording: null,
-                on_task: isStudentOnTask,
-            };
+        //Built data to send to util function
+        const studentObsData: any = {
+            session_id: Number(sessionId),
+            //Ensure difference between teacher and student form ids
+            student_id: studentObsStudentId,
+            behavior_tags: selectedStudentTags,
+            affect: selectedAffectTags,
+            custom_tags: selectedStudentCustomTags,
+            submitted_by_user: true,
+            note: extraStudentNote,
+            //New tag sent only to controller in server to loosen error-checking for single click observations
+            single_click: true,
+            recording: null,
+            on_task: isStudentOnTask,
+        };
 
-            //Add recording tag if it is true
-            if (recording) {
-                studentObsData.recording = true;
-            } else if (recording === false) {
-                studentObsData.recording = false;
-            }
+        //Add recording tag if it is true
+        if (recording) {
+            studentObsData.recording = true;
+        } else if (recording === false) {
+            studentObsData.recording = false;
+        }
+        try {
             //Call util function with formatted data
             await createStudentObservation(studentObsData);
             //Clear selected forms
             clearUserSelections();
         } catch (error) {
             console.error('Failed to submit student observation', error);
+            console.log('Adding Student Observation to waiting logs.')
+            storeObservationLocally(studentObsData);
+            clearUserSelections();
         }
     }
 
     //Helper function to send student observation info to server when a single new tag is clicked
     const handleStudentObservationSingleSubmit = async (tagCategory: string, tagText: string) => {
+        //add tag text to array to meet server standards 
+        const singleTagArray = [tagText];
+
+        //Built data to send to util function
+        const studentObsData: any = {
+            session_id: Number(sessionId),
+            //Ensure difference between teacher and student form ids
+            student_id: studentObsStudentId,
+            [tagCategory]: singleTagArray,
+            submitted_by_user: false,
+            single_click: true,
+            recording: null,
+        };
         try {
-            //add tag text to array to meet server standards 
-            const singleTagArray = [tagText];
-
-            //Built data to send to util function
-            const studentObsData: any = {
-                session_id: Number(sessionId),
-                //Ensure difference between teacher and student form ids
-                student_id: studentObsStudentId,
-                [tagCategory]: singleTagArray,
-                submitted_by_user: false,
-                single_click: true,
-                recording: null,
-            };
-
             //Call util function with formatted data
             await createStudentObservation(studentObsData);
         } catch (error) {
             console.error('Failed to submit student observation', error);
+            console.log('Adding Teacher Single Submit Observation to waiting logs.')
+            storeObservationLocally(studentObsData);
         }
     }
 
@@ -393,6 +425,8 @@ export default function ObservationScreen() {
 
     return (
         <>
+            {/* Offline indicator that is loaded when user is offline */}
+            <OfflineIndicator/>
             <header className="fixed top-0 left-0 right-0 w-full max-w-[800px] mx-auto h-[51px] bg-[var(--grey-accent)] grid grid-cols-12 items-center">
                 <ArrowLeft className="ml-3 col-span-1 w-[24px] h-[24px]" style={{cursor: 'pointer' }} onClick={() => navigator('/')}  />
                 <p className="text-center col-span-4 text-base">{`Observer: ${sessionData?.observer_name}`}</p>

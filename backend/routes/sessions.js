@@ -9,6 +9,9 @@ const sessionController = require('../controllers/SessionController.js');
 //Post Route to create a new entry in session table
 router.post('/', sessionController.createSession);
 
+//Get Route to check if server is online
+router.get('/check', sessionController.checkSession);
+
 //Get Route to retrieve session information using session id
 router.get('/:id', sessionController.getSessionById);
 
