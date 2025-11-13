@@ -31,7 +31,7 @@ export default function StartForm() {
     const [lessonTitleErrorMsg, setLessonTitleErrorMsg] = useState('');
     //Holds lesson description for text input form and potential error message
     const [lessonDescription, setLessonDescription] = useState('');
-    const [lessonDescriptionErrorMsg, setLessonDescriptionErrorMsg] = useState('');
+
     
 
     //Async function to handle submission of form 
@@ -196,18 +196,9 @@ export default function StartForm() {
                         name="lessonDescription"
                         value={lessonDescription}
                         onChange={(e) => setLessonDescription(e.target.value)}
-                        onBlur={() => {
-                            if (!lessonDescription) setLessonDescriptionErrorMsg("Name is required.");
-                            //Additional Error Messages
-                            else setLessonDescriptionErrorMsg('');
-                        }}
                         placeholder=""
                         className="h-[98px]"
                     />
-                    {/* Display error message for teacher name if it exists */}
-                    {lessonDescriptionErrorMsg && (
-                        <p className="text-red-500 text-xs mt-1">{lessonDescriptionErrorMsg}</p>
-                    )}
                 </div>
                 {/*Button to Submit From when Width exceeds 762px for more centeralized design */}
                 <button className="hidden md:block mx-auto text-white my-4 px-4 py-2 rounded bg-[var(--accent-color)]" style={{ cursor: 'pointer' }} onClick={() => handleFormSubmission()}>Start Observation</button>

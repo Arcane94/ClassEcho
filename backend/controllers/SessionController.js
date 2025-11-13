@@ -71,3 +71,9 @@ exports.getSessionById = async (req, res) => {
       return res.status(500).json({ error: 'Server error' });
     }
   };
+
+  //Logic to check session and ensure server is currently up and running
+  //GET /sessions/check
+  exports.checkSession = async (req, res) => {
+    res.status(200).json({ message: "Server is Online"});
+  }

@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "../config";
+
 export interface SessionData {
     session_id: string;
     observer_name: string;
@@ -12,7 +14,7 @@ export interface SessionData {
   //Calls server and attempts to retrieve session information using session id
   export async function fetchSessionById(sessionId: string): Promise<SessionData | null> {
     try {
-      const response = await fetch(`http://localhost:3011/sessions/${sessionId}`);
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`);
   
       if (!response.ok) {
         //If session could not be found, alert console
