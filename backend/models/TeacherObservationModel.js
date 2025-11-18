@@ -31,6 +31,17 @@ exports.create = async function (info) {
   return id;
 };
 
+//Logic to delete multiple teacher observations
+exports.deleteMultiple = async (ids) => {
+  // Use whereIn to delete all rows at once
+  const deletedRows = await db('teacher_observation')
+    .whereIn('id', ids)
+    .del();
+
+  // returns number of rows deleted
+  return deletedRows; 
+};
+
 exports.update = async function (id, patch) {
   const upd = {}
   if (patch.start_time !== undefined) {

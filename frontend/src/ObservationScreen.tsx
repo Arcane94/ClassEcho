@@ -4,6 +4,7 @@ import SmallTextForm from "./components/SmallTextForm";
 import studentSendFormSvg from "./assets/images/student_send_form.svg";
 import teacherSendFormSvg from "./assets/images/teacher_send_form.svg";
 import invalidSendFormSvg from "./assets/images/invalid_send_form.svg";
+import deleteRecordingSvg from "./assets/images/delete_recording.svg";
 import startRecordPng from "./assets/images/start_recording.png";
 import stopRecordSvg from "./assets/images/stop_recording.svg";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,8 @@ import { fetchSessionById } from "./utils/fetchSessionById";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
 import { createTeacherObservation } from "./utils/createTeacherObservation";
 import { createStudentObservation } from "./utils/createStudentObservation";
+import { deleteStudentObservations } from "./utils/deleteStudentObservations";
+import { deleteTeacherObservations } from "./utils/deleteTeacherObservations";
 import type { SessionData } from './utils/fetchSessionById';
 import OfflineIndicator from "./components/OfflineIndicator";
 
@@ -136,6 +139,13 @@ export default function ObservationScreen() {
 
     //Tick counter that allows observation time to have a new key when updated
     const [observationTick, setObservationTick] = useState(0);
+
+    //An array of single-click student observation ids that are saved when a user is recording, exists so these can be removed from database if record is cancelled
+    const [recordingStudentIdBackup, setRecordingStudentIdBackup] = useState<number[]>([]);
+
+    //An array of single-click teacher observation ids that are saved when a user is recording, exists so these can be removed from database if record is cancelled
+    const [recordingTeacherIdBackup, setRecordingTeacherIdBackup] = useState<number[]>([]);
+
 
     //UseEffect statement to be triggered on component load that uses sessionId to pull additional session info from server
     useEffect(() => {
@@ -305,7 +315,11 @@ export default function ObservationScreen() {
         };
         try {
             //Call util function with formatted data
-            await createTeacherObservation(teacherObsData);
+            const response = await createTeacherObservation(teacherObsData);
+            if (isRecordingTeacherObs) {
+                //if the user is recording, save the id from this log to the recording backup
+                setRecordingTeacherIdBackup(prev => [...prev, response]);
+            }
         } catch (error) {
             console.error('Failed to submit teacher observation', error);
             console.log('Adding Teacher Single Submit Observation to waiting logs.')
@@ -364,10 +378,15 @@ export default function ObservationScreen() {
             submitted_by_user: false,
             single_click: true,
             recording: null,
+            on_task: isStudentOnTask,
         };
         try {
             //Call util function with formatted data
-            await createStudentObservation(studentObsData);
+            const response = await createStudentObservation(studentObsData);
+            if (isRecordingStudentObs) {
+                //if the user is recording, save the id from this log to the recording backup
+                setRecordingStudentIdBackup(prev => [...prev, response]);
+            }
         } catch (error) {
             console.error('Failed to submit student observation', error);
             console.log('Adding Teacher Single Submit Observation to waiting logs.')
@@ -421,6 +440,57 @@ export default function ObservationScreen() {
         } catch (error) {
             console.error('Failed to submit observation', error);
         }
+    }
+
+    //Helper function to handle when a recording is cancelled while in progress
+    const handleCancelRecording = async () => {
+        //Clear the user's selections
+        clearUserSelections();
+        //Delete correct tags
+        if (isRecordingStudentObs) {
+            await deleteStudentObservations(recordingStudentIdBackup);
+            //Clear the backup
+            setRecordingStudentIdBackup([]);
+            //Build a minimal objext to send as an observation to represent recording stop
+            const studentObsData: any = {
+                session_id: Number(sessionId),
+                //Ensure difference between teacher and student form ids
+                submitted_by_user: false,
+                single_click: true,
+                recording: false,
+            };
+            try {
+                //Call util function with formatted data
+                await createStudentObservation(studentObsData);
+            } catch (error) {
+                console.error('Failed to submit student observation', error);
+                console.log('Adding Student Single Submit Observation to waiting logs.')
+                storeObservationLocally(studentObsData);
+            }
+        } else {
+            await deleteTeacherObservations(recordingTeacherIdBackup);
+            //Clear the backup
+            setRecordingTeacherIdBackup([]);
+            //Build a minimal objext to send as an observation to represent recording stop
+            const teacherObsData: any = {
+                session_id: Number(sessionId),
+                //Ensure difference between teacher and student form ids
+                submitted_by_user: false,
+                single_click: true,
+                recording: false,
+            };
+            try {
+                //Call util function with formatted data
+                await createTeacherObservation(teacherObsData);
+            } catch (error) {
+                console.error('Failed to submit teacher observation', error);
+                console.log('Adding Teacher Single Submit Observation to waiting logs.')
+                storeObservationLocally(teacherObsData);
+            }
+        }
+        //Set the proper isRecording tag to false
+        setIsRecordingStudentObs(false);
+        setIsRecordingTeacherObs(false);
     }
 
     return (
@@ -630,6 +700,7 @@ export default function ObservationScreen() {
                                     </div>
                                 ) :  (
                                     <div className="flex gap-2">
+                                        <img src={deleteRecordingSvg} alt="Delete Record Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={() => handleCancelRecording() }/>
                                         <img src={stopRecordSvg} alt="Stop Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={handleStopRecordingObservation}/>
                                         <img src={invalidSendFormSvg} alt="Invalid Send Form Button" style={{cursor: 'not-allowed'}} className="w-[36px] h-[36px]"/>
                                     </div>

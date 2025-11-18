@@ -59,3 +59,29 @@ exports.createStudentObservation = async (req, res) => {
       return res.status(500).json({ error: 'Unexpected Student Observation Creation Error' });
     }
   };
+
+  //Logic to find and remove an observation from the logs given the observations id
+  exports.deleteStudentObservation = async (req, res) => {
+    try {
+      //Pull ids from request body
+       ids = req.body.ids;
+
+       //Ensure that an ids were given and that the length of array is greater than 0
+       if (!ids || ids.length === 0) {
+        return res.status(400).json({error: "No id given."})
+       }
+
+       //Convert ids to numbers
+       ids = ids.map(item => typeof item === "object" ? item.id : item);
+
+       console.log(`Deleting observations with ids: ${ids}`)
+       //Delete all rows
+       const rowsDeleted = await studentObservationModel.deleteMultiple(ids);
+
+       //Return number of deletes performed
+       return res.status(200).json({data: rowsDeleted});
+    } catch (error) {
+      console.error("Unexpected Error Occurred while deleting logs", error);
+      return res.status(500).json({error: "Unexpected Server Error"});
+    }
+  }
