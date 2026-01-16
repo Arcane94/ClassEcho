@@ -8,5 +8,7 @@ const teacherController = require('../controllers/TeacherObservationController.j
 
 //Post Route to create a new teacher obsservation
 router.post('/', teacherController.createTeacherObservation);
+//Post route to delete a new student observation
+router.post('/delete', teacherController.deleteTeacherObservation);
 
 module.exports = router;

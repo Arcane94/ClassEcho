@@ -9,6 +9,7 @@ exports.create = async function (info) {
     session_id: info.session_id,
     student_id: info.student_id ?? null,
     start_time: info.start_time ?? null,
+    teacher_position: info.teacher_position ?? null,
 
     // Tag section can be strings (keys) or numeric IDs (store as JSON strings)
     behavior_tags:  info.behavior_tags  ? JSON.stringify(info.behavior_tags)  : null,
@@ -29,6 +30,17 @@ exports.create = async function (info) {
 
   const [id] = await db(TABLE).insert(row);
   return id;
+};
+
+//Logic to delete multiple teacher observations
+exports.deleteMultiple = async (ids) => {
+  // Use whereIn to delete all rows at once
+  const deletedRows = await db('teacher_observation')
+    .whereIn('id', ids)
+    .del();
+
+  // returns number of rows deleted
+  return deletedRows; 
 };
 
 exports.update = async function (id, patch) {

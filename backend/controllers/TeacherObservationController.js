@@ -14,6 +14,7 @@ exports.createTeacherObservation = async (req, res) => {
       note,
       session_id,
       student_id,
+      teacher_position,
       behavior_tags,
       structure_tags,
       function_tags,
@@ -45,6 +46,7 @@ exports.createTeacherObservation = async (req, res) => {
       start_time: new Date(),
       session_id,
       student_id,
+      teacher_position,
       behavior_tags,
       structure_tags,
       function_tags,
@@ -68,3 +70,29 @@ exports.createTeacherObservation = async (req, res) => {
     return res.status(500).json({ error: 'Unexpected Teacher Observation Creation Error' });
   }
 };
+
+//Logic to delete multiple observations
+exports.deleteTeacherObservation = async (req, res) => {
+  try {
+    //Pull ids from request body
+     ids = req.body.ids;
+
+     //Ensure that an ids were given and that the length of array is greater than 0
+     if (!ids || ids.length === 0) {
+      return res.status(400).json({error: "No id given."})
+     }
+
+     //Convert ids to numbers
+     ids = ids.map(item => typeof item === "object" ? item.id : item);
+
+     console.log(`Deleting observations with ids: ${ids}`)
+     //Delete all rows
+     const rowsDeleted = await teacherObservationModel.deleteMultiple(ids);
+
+     //Return number of deletes performed
+     return res.status(200).json({data: rowsDeleted});
+  } catch (error) {
+    console.error("Unexpected Error Occurred while deleting logs", error);
+    return res.status(500).json({error: "Unexpected Server Error"});
+  }
+}
