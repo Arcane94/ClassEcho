@@ -22,6 +22,7 @@ CREATE TABLE teacher_observation (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT NOT NULL,
     student_id VARCHAR(100),
+    teacher_position VARCHAR(100),
     start_time DATETIME,
     behavior_tags JSON,
     function_tags JSON,
