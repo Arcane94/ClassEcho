@@ -17,6 +17,8 @@ exports.createSession = async (req, res) => {
             teacher_name,
             lesson_name,
             lesson_description,
+            observers,
+            editors
         } = req.body;
 
         //Ensure fields are all filled
@@ -36,6 +38,8 @@ exports.createSession = async (req, res) => {
           teacher_name,
           lesson_name: lesson_name,
           lesson_description: lesson_description || null,
+          observers: observers || null,
+          editors: editors || null,
         };
 
         //Logic to create new session in database should go here

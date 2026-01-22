@@ -16,8 +16,10 @@ exports.create = async function(info) {
     lesson_name: info.lesson_name ?? null,
     // Optional description
     lesson_description: info.lesson_description ?? null,
-    // Any additional information passed in (Optional inclusion)
-    // meta: info.meta ? JSON.stringify(info.meta) : null
+    //List of user ids of all observers that have accessed this session
+    observers: info.observers ? JSON.stringify(info.observers) : null,
+    // List of user ids of observers that have edit access to this session
+    editors: info.editors ? JSON.stringify(info.editors) : null,
   };
 
   const [session_id] = await db(TABLE).insert(row);
@@ -28,8 +30,3 @@ exports.getById = async function (session_id) {
   const row = await db(TABLE).where({session_id}).first();
   return row || null;
 };
-
-// If needed, getting a list of all rows may be implemented
-// exports.getAll = async function () {
-
-// }
