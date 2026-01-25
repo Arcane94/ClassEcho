@@ -20,3 +20,15 @@ exports.getById = async function (section_id) {
   const row = await db(TABLE).where({section_id}).first();
   return row || null;
 };
+
+// Returns a list of all session sections for a given session id (May be used mostly in tag editing)
+exports.getAllSectionsBySessionId = async function (session_id) {
+  const rows = await db(TABLE).where({session_id});
+  return rows || [];
+}
+
+// Returns a list of all session sections in a sessionfor a given segtor ('Student', 'Teacher', etc.)
+exports.getAllSectionsBySegtorAndId = async function (session_segtor, session_id) {
+  const rows = await db(TABLE).where({session_segtor, session_id});
+  return rows || [];
+}

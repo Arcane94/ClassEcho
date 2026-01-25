@@ -20,3 +20,9 @@ exports.getById = async function (tag_id) {
   const row = await db(TABLE).where({tag_id}).first();
   return row || null;
 };
+
+// Returns a list of all section tags for a given section
+exports.getBySection = async function (section_id) {
+  const rows = await db(TABLE).where({section_id});
+  return rows || [];
+};

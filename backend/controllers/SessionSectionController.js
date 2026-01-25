@@ -3,6 +3,9 @@
 //Retrieve the SessionSection Model
 const SessionSection = require(`../models/SessionSectionModel`);
 
+// Import the SectionTagModel to get tags
+const SectionTagModel = require(`./SectionTagModel`);
+
 // Creates a new session_section entry in the database for the selected session
 // POST /session_sections
 exports.createSessionSection = async (req, res) => {
@@ -59,6 +62,23 @@ exports.getSessionSectionById = async (req, res) => {
     }
 };
 
+//Logic to retrieve all the tags associated with a session_section using id
+//GET /session_sections/:id/tags
+exports.getTagsBySessionSectionId = async (req, res) => {
+    try {
+        //parse id from parameters
+        const { section_id } = req.params;
+
+        // Retrieve all tags associated with this section_id
+        const tags = await SectionTagModel.getBySection(section_id);
+
+        return res.json(tags);
+    } catch (err) {
+        console.error('Error fetching tags:', err);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
 //Logic to delete a session_section entry from the database using id
 //DELETE /session_sections/:id
 exports.deleteSessionSectionById = async (req, res) => {
@@ -76,3 +96,5 @@ exports.deleteSessionSectionById = async (req, res) => {
         return res.status(500).json({ error: 'Server error' });
     }
 };
+
+//Logic to retrieve all session sections along with their tags for a given session id and segtor NEED LATER

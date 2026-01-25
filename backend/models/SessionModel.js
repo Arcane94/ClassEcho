@@ -30,3 +30,4 @@ exports.getById = async function (session_id) {
   const row = await db(TABLE).where({session_id}).first();
   return row || null;
 };
+
