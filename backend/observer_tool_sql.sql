@@ -8,10 +8,10 @@ USE observer;
 CREATE TABLE observer_user (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     -- List of the ids of all sessions that belong to this user
-    user_sessions JSON
+    sessions JSON
 );
 
 -- =========================
@@ -23,12 +23,14 @@ CREATE TABLE session (
     local_time DATETIME,
     observer_name VARCHAR(100),
     teacher_name VARCHAR(100),
-    lesson_name VARCHAR(200),
+    session_name VARCHAR(200),
     lesson_description TEXT,
     -- List of the user ids of all observers that have accessed this section
     observers JSON,
     -- List of the user ids of observers that have edit access to this session
     editors JSON,
+    -- Unique join code for observers to join this session
+    join_code VARCHAR(50) NOT NULL UNIQUE
 );
 
 -- =========================

@@ -13,7 +13,8 @@ exports.create = async function(info) {
 
     observer_name: info.observer_name ?? null,
     teacher_name: info.teacher_name ?? null,
-    lesson_name: info.lesson_name ?? null,
+    session_name: info.session_name ?? null,
+    join_code: info.join_code,
     // Optional description
     lesson_description: info.lesson_description ?? null,
     //List of user ids of all observers that have accessed this session
@@ -31,3 +32,8 @@ exports.getById = async function (session_id) {
   return row || null;
 };
 
+// Function to get session by join code
+exports.getByJoinCode = async function (join_code) {
+  const row = await db(TABLE).where({join_code}).first();
+  return row || null;
+};

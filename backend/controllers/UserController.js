@@ -46,23 +46,24 @@ exports.createUser = async (req, res) => {
 // POST /user/login
 exports.loginUser = async (req, res) => {
     try {
+        console.log(" Attempting login with body:", req.body);
         // Save Body fields
         const { username, password } = req.body;
         // Ensure fields are all filled
         if (!username || !password) {
-            return res.status(400).json({ error: 'Missing required fields' });
+            return res.status(400).json({ error: 'Please enter both username and password.' });
         }
 
         //Retrieve user from database using username
         const user = await User.getByUsername(username);
         //If user not found, return error
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'No user found with that username.' });
         }
         //Compare provided password with stored hashed password
         const passwordMatch = await bcrypt.compare(password, user.hashed_password);
         if (!passwordMatch) {
-            return res.status(401).json({ error: 'Invalid password' });
+            return res.status(401).json({ error: 'Invalid Password' });
         }
         //If login successful, return user information (excluding hashed password)
         return res.json({ user_id: user.user_id, username: user.username, sessions: user.sessions });

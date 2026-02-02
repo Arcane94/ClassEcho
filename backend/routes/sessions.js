@@ -15,4 +15,7 @@ router.get('/check', sessionController.checkSession);
 //Get Route to retrieve session information using session id
 router.get('/:id', sessionController.getSessionById);
 
+//Get Route to retrieve session information using join code
+router.get('/join/:join_code', sessionController.getSessionByJoinCode);
+
 module.exports = router;

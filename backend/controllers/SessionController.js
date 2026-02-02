@@ -15,14 +15,15 @@ exports.createSession = async (req, res) => {
             local_time,
             observer_name,
             teacher_name,
-            lesson_name,
+            session_name,
             lesson_description,
+            join_code,
             observers,
             editors
         } = req.body;
 
         //Ensure fields are all filled
-        if (!observer_name || !teacher_name || !lesson_name || !local_time) {
+        if (!observer_name || !teacher_name || !session_name || !local_time || !join_code) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -36,8 +37,9 @@ exports.createSession = async (req, res) => {
           local_time: formattedLocalTime,
           observer_name,
           teacher_name,
-          lesson_name: lesson_name,
+          session_name: session_name,
           lesson_description: lesson_description || null,
+          join_code: join_code,
           observers: observers || null,
           editors: editors || null,
         };
@@ -67,6 +69,28 @@ exports.getSessionById = async (req, res) => {
       //Return a 404 error if session cannot be found
       if (!session) {
         return res.status(404).json({ error: 'Session not found' });
+      }
+  
+      return res.json(session);
+    } catch (err) {
+      console.error('Error fetching session:', err);
+      return res.status(500).json({ error: 'Server error' });
+    }
+  };
+
+//Logic to retrieve session information from database using join code
+//GET /sessions/:join_code
+exports.getSessionByJoinCode = async (req, res) => {
+    try {
+      //parse id from parameters
+      const { join_code } = req.params;
+  
+      //Logic to retrieve session from database using id
+      const session = await Session.getByJoinCode(join_code);
+      console.log(session);
+      //Return a 404 error if session cannot be found
+      if (!session) {
+        return res.status(404).json({ error: 'Failed to find session' });
       }
   
       return res.json(session);
