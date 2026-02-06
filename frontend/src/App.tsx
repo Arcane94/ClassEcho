@@ -9,6 +9,7 @@ import CreateAccountScreen from './CreateAccountScreen'
 import SessionOptionsScreen from './SessionOptionsScreen'
 import JoinExistingSessionScreen from './JoinExistingSessionScreen'
 import CreateNewSessionScreen from './CreateNewSessionScreen'
+import CustomizeSessionScreen from './CustomizeSessionScreen'
 function App() {
   return (
     <Router>
@@ -19,6 +20,7 @@ function App() {
         <Route path="/session-options" element={<SessionOptionsScreen />} />
         <Route path="/join-existing" element={<JoinExistingSessionScreen />} />
         <Route path="/create-new" element={<CreateNewSessionScreen />} />
+        <Route path="/customize-session" element={<CustomizeSessionScreen />} />
       </Routes>
     </Router>
   )

@@ -23,18 +23,16 @@ exports.createSession = async (req, res) => {
         } = req.body;
 
         //Ensure fields are all filled
-        if (!observer_name || !teacher_name || !session_name || !local_time || !join_code) {
+        if (!observer_name || !teacher_name || !session_name || !join_code) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        
-        //Convert local_time to sql acceptable format
-        const formattedLocalTime = toMySQLDateTime(local_time);
+
 
         //Save all fields to send to model
         const info = {
           server_time: new Date(),
-          local_time: formattedLocalTime,
+          local_time: formattedLocalTime ?? null,
           observer_name,
           teacher_name,
           session_name: session_name,
