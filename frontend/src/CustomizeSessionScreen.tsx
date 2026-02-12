@@ -5,6 +5,7 @@ import { ArrowLeft, X } from "lucide-react";
 
 //File Imports
 import AddTagModal from "./components/AddTagModal";
+import { createSession } from "./utils/createSession";
 
 export default function CustomizeSessionScreen() {
     // Constant Tags for default tags
@@ -35,17 +36,15 @@ export default function CustomizeSessionScreen() {
     //State to store custom tags for student categories
     const [studentTags, setStudentTags] = useState<string[]>([]);
 
-    sessionData.deafultTags = true;
-
     //UseEffect to prefill tags with default tags if sessionData.defaultTags is true
     useEffect(() => {
-        if (sessionData.defaultTags) {
+        if (sessionData.isDefaultTags) {
             setTeacherBehaviorTags([...consTeacherBehaviorTags]);
             setFunctionTags([...consFunctionTags]);
             setStructureTags([...consStructureTags]);
             setStudentTags([...consStudentBehaviorTags]);
         }
-    }, [sessionData.defaultTags]);
+    }, [sessionData.isDefaultTags]);
 
     //Helper function to add a tag to a specific category
     const addTag = (category: string, value: string) => {
@@ -84,17 +83,51 @@ export default function CustomizeSessionScreen() {
     };
 
     //Handle creating the session with custom tags
-    const handleCreateSession = () => {
-        //TODO: Add logic to create session with custom tags
-        console.log('Creating session with:', {
-            ...sessionData,
-            teacherBehaviorTags,
-            functionTags,
-            structureTags,
-            studentTags
-        });
-        //Navigate to the appropriate screen after creation
-        navigate('/');
+    const handleCreateSession = async () => {
+        const userIdRaw = localStorage.getItem("user_id");
+        const userId = userIdRaw ? Number(userIdRaw) : undefined;
+
+        const sections = [
+            {
+                session_segtor: "Teacher",
+                section_name: "Behavior",
+                tags: teacherBehaviorTags.map(tag_name => ({ tag_name }))
+            },
+            {
+                session_segtor: "Teacher",
+                section_name: "Function",
+                tags: functionTags.map(tag_name => ({ tag_name }))
+            },
+            {
+                session_segtor: "Teacher",
+                section_name: "Structure",
+                tags: structureTags.map(tag_name => ({ tag_name }))
+            },
+            {
+                session_segtor: "Student",
+                section_name: "Behaviors",
+                tags: studentTags.map(tag_name => ({ tag_name }))
+            },
+        ];
+
+        try {
+            const { session_id } = await createSession({
+                local_time: new Date().toISOString(),
+                observer_name: sessionData.name,
+                teacher_name: sessionData.teacherName,
+                session_name: sessionData.sessionName,
+                lesson_description: sessionData.lessonDescription,
+                join_code: sessionData.joinCode,
+                observers: userId ? [userId] : undefined,
+                editors: userId ? [userId] : undefined,
+                sections,
+            });
+
+            console.log('Created session id:', session_id);
+            navigate('/');
+        } catch (error) {
+            console.error('Failed to create session', error);
+        }
     };
 
     return (

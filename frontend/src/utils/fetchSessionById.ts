@@ -8,7 +8,7 @@ export interface SessionData {
     lesson_description: string;
     local_time: string;
     server_time: string;
-    // Add any other fields your session might have
+    join_code: string;
   }
   
   //Calls server and attempts to retrieve session information using session id

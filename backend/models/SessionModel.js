@@ -6,7 +6,8 @@ const db = require('../config/dbConfig.js');
 
 const TABLE = 'session';
 
-exports.create = async function(info) {
+exports.create = async function(info, trx = null) {
+  const dbOrTrx = trx || db;
   const row = {
     server_time: info.server_time ?? new Date(),
     local_time: info.local_time ?? null,
@@ -23,7 +24,7 @@ exports.create = async function(info) {
     editors: info.editors ? JSON.stringify(info.editors) : null,
   };
 
-  const [session_id] = await db(TABLE).insert(row);
+  const [session_id] = await dbOrTrx(TABLE).insert(row);
   return session_id;
 };
 

@@ -7,10 +7,7 @@ export interface TeacherObservationData {
     student_id?: string;
     start_time?: string;
     teacher_position?: string;
-    behavior_tags?: string[];
-    function_tags?: string[];
-    structure_tags?: string[];
-    custom_tags?: string[];
+    selected_tags?: Record<string, string[]>;
     submitted_by_user?: boolean;
     recording?: boolean;
     note?: string;

@@ -2,6 +2,9 @@
 
 //Retrieve the Session Model
 const Session = require(`../models/SessionModel`);
+const SessionSection = require(`../models/SessionSectionModel`);
+const SectionTag = require(`../models/SectionTagModel`);
+const db = require('../config/dbConfig');
 //Datetime conversion function
 const { toMySQLDateTime } = require('../utils/ToSQLDateTime');
 
@@ -12,14 +15,15 @@ exports.createSession = async (req, res) => {
     try {
         //Save Body fields
         const {
-            local_time,
-            observer_name,
-            teacher_name,
-            session_name,
-            lesson_description,
-            join_code,
-            observers,
-            editors
+          local_time,
+          observer_name,
+          teacher_name,
+          session_name,
+          lesson_description,
+          join_code,
+          observers,
+          editors,
+          sections
         } = req.body;
 
         //Ensure fields are all filled
@@ -32,7 +36,7 @@ exports.createSession = async (req, res) => {
         //Save all fields to send to model
         const info = {
           server_time: new Date(),
-          local_time: formattedLocalTime ?? null,
+          local_time: local_time ? toMySQLDateTime(local_time) : null,
           observer_name,
           teacher_name,
           session_name: session_name,
@@ -42,12 +46,39 @@ exports.createSession = async (req, res) => {
           editors: editors || null,
         };
 
-        //Logic to create new session in database should go here
-        const session_id = await Session.create(info);
+        const result = await db.transaction(async (trx) => {
+          const session_id = await Session.create(info, trx);
 
-        console.log('Retrieved id: ', session_id);
-        //For now, return a madeup sessionId to frontend
-        return res.status(201).json({ session_id });
+          const createdSections = [];
+          if (Array.isArray(sections)) {
+            for (const section of sections) {
+              const section_id = await SessionSection.create({
+                session_id,
+                session_segtor: section.session_segtor,
+                section_name: section.section_name,
+              }, trx);
+
+              const createdTags = [];
+              if (Array.isArray(section.tags)) {
+                for (const tag of section.tags) {
+                  const tag_id = await SectionTag.create({
+                    section_id,
+                    tag_name: tag.tag_name,
+                    is_selected: tag.is_selected ?? false,
+                  }, trx);
+                  createdTags.push({ tag_id, tag_name: tag.tag_name });
+                }
+              }
+
+              createdSections.push({ section_id, section_name: section.section_name, tags: createdTags });
+            }
+          }
+
+          return { session_id, sections: createdSections };
+        });
+
+        console.log('Retrieved id: ', result.session_id);
+        return res.status(201).json(result);
     } catch (error) {
         console.error('Unexpected error creating session', error);
         return res.status(500).json({ error: 'Unexpected Session Creation Error'});
@@ -103,3 +134,30 @@ exports.getSessionByJoinCode = async (req, res) => {
   exports.checkSession = async (req, res) => {
     res.status(200).json({ message: "Server is Online"});
   }
+
+//Logic to retrieve all sections and tags for a given session id
+//GET /sessions/:id/sections
+exports.getSessionSections = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const sections = await SessionSection.getAllSectionsBySessionId(id);
+
+    const sectionsWithTags = await Promise.all(
+      sections.map(async (section) => {
+        const tags = await SectionTag.getBySection(section.section_id);
+        return {
+          section_id: section.section_id,
+          session_segtor: section.session_segtor,
+          section_name: section.section_name,
+          tags: tags.map(tag => tag.tag_name)
+        };
+      })
+    );
+
+    return res.json({ sections: sectionsWithTags });
+  } catch (err) {
+    console.error('Error fetching session sections:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};

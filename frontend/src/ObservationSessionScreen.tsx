@@ -1,3 +1,4 @@
+//First pull all session info using the join code
 import {ArrowLeft} from "lucide-react";
 import { useState, useEffect } from "react";
 import SmallTextForm from "./components/SmallTextForm";
@@ -12,14 +13,15 @@ import { getCurrentTimeFormatted } from "./utils/getCurrentTimeFormatted";
 import AddTagModal from "./components/AddTagModal";
 import FadeOutText from "./components/FadeOutText";
 import { useSearchParams } from "react-router-dom";
-import { fetchSessionById } from "./utils/fetchSessionById";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
 import { createTeacherObservation } from "./utils/createTeacherObservation";
 import { createStudentObservation } from "./utils/createStudentObservation";
 import { deleteStudentObservations } from "./utils/deleteStudentObservations";
 import { deleteTeacherObservations } from "./utils/deleteTeacherObservations";
-import type { SessionData } from './utils/fetchSessionById';
+import type { SessionSectionInfo } from "./utils/getSessionSectionInfo";
+import type { SessionInfo } from "./utils/getSessionByJoinCode";
 import OfflineIndicator from "./components/OfflineIndicator";
+import { getSessionSectionInfo } from "./utils/getSessionSectionInfo";
 
 
 //Affect Icon Svg Imports 
@@ -36,7 +38,7 @@ import sadAffectIcon from "./assets/images/sad_affect.svg";
 import { storeObservationLocally, offlineLogging } from "./utils/offlineQueue";
 
 //Defines the behavior and design of the screen allowing users to make observations on both teachers an students
-export default function ObservationScreen() {
+export default function ObservationSessionScreen() {
 
     //Navigator
     const navigator = useNavigate();
@@ -44,8 +46,14 @@ export default function ObservationScreen() {
     //Pull search params to get session id
     const [searchParams] = useSearchParams();
 
-    //State to store sessionData for this session, stored together as this should not change
-    const [sessionData, setSessionData] = useState<SessionData | null>(null);
+    //State to store sessionInfo for this session, stored together as this should not change
+    const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+
+    //State to store the section info for the teacher observation side of the session
+    const [teacherSections, setTeacherSections] = useState<SessionSectionInfo[]>([]);
+
+    //State to store the section info for the student observation side of the session
+    const [studentSections, setStudentSections] = useState<SessionSectionInfo[]>([]);
 
     //State to store the category, if any, that the add tag modal is opened for
     const [AddTagModalString, setAddTagModalString] = useState('');
@@ -74,29 +82,14 @@ export default function ObservationScreen() {
     //State to store selected behavior tag class
     const [behaviorClass, setBehaviorClass] = useState('By Student');
 
-    //State to store selected student tag
-    const [selectedStudentTags, setSelectedStudentTags] = useState<string[]>([]);
+    //State to store the selected tags for teacher observation
+    const [selectedTeacherTags, setSelectedTeacherTags] = useState<Record<string, string[]>>({});
+
+    //State to store the selected behavior tags for student observation
+    const [selectedStudentTags, setSelectedStudentTags] = useState<Record<string, string[]>>({});
 
     //State to store selected student affect tags
     const [selectedAffectTags, setSelectedAffectTags] = useState<string[]>([]);
-
-    //State to store selected behavior tags
-    const [selectedBehaviorTags, setSelectedBehaviorTags] = useState<string[]>([]);
-
-    //State to store selected function tag
-    const [selectedFunctionTags, setSelectedFunctionTags] = useState<string[]>([]);
-
-    //State to store selected structure tag
-    const [selectedStructureTags, setSelectedStructureTags] = useState<string[]>([]);
-
-    //State to store a map of custom tags with the key being the section they belong and the value being the tag name
-    const [customTags, setCustomTags] = useState<Map<string, string[]>>(new Map());
-
-    //State to store selected student custom tags in "[TAG NAME] - [TAG CATEGORY]" format
-    const [selectedStudentCustomTags, setSelectedStudentCustomTags] = useState<string[]>([]);
-
-    //State to store selected teacher custom tags in "[TAG NAME] - [TAG CATEGORY]" format
-    const [selectedTeacherCustomTags, setSelectedTeacherCustomTags] = useState<string[]>([]);
 
     //State to store student ID(s) from teacher side
     const [teacherObsStudentId, setTeacherObsStudentId] = useState('');
@@ -104,26 +97,14 @@ export default function ObservationScreen() {
     //State to store student ID(s) from student side
     const [studentObsStudentId, setStudentObsStudentId] = useState('');
 
+    //Constant List of Teacher Position Tags
+    const teacherPositionTags = ["By Student", "At Front", "On LMS", "Walking"];
+
     //Constant List of Student Emotion Affects
     const studentAffects = ["Excited", "Suprised", "Happy", "Relaxed", "Tired", "Bored", "Sad", "Confused", "Frustrated", "Angry", "Focused", "Unfocused"];
 
     //Constant List of Student Emotion Affect Icons
     const studentAffectIcons = [excitedAffectIcon, excitedAffectIcon, happyAffectIcon, relaxedAffectIcon, tiredAffectIcon, boredAffectIcon, sadAffectIcon, confusedAffectIcon, frustratedAffectIcon, angryAffectIcon, happyAffectIcon, boredAffectIcon];
-
-    //Constant List of Behavior Tag Classifications
-    const behaviorTagClassifications = ["By Student", "At Front", "On LMS", "Walking"];
-
-    //List of preset behavior tags
-    const teacherBehaviorTags = ["Open-ended questions", "Direct to tasks", "Directs to resources", "Models struggle", "Teaches CT concept", "Manages behavior", "Stretch goals", "Reminds to save code", "Encourages collaboration", "Encourages participation", "Organizes peer tutors", "Organizes paired programming", "Encourages help-seeking", "Teaches collaboration", "Normalizes mistakes", "Connects to student interest"];
-
-    //List of Function Tags
-    let functionTags = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
-
-    //List of Structure Tags
-    let structureTags = ["Activity", "Help-seeking queue", "LMS", "Rules and Norms", "Snap!"];
-
-    //List of Student Tags for Student Observation
-    let studentTags = ["Coding", "Collaborating", "Logging In", "Planning", "Reading Code", "Reading Instructions", "Talking w/ teacher", "Waiting for help", "Debugging", "On Unrelated Tab", "Requesting Help", "Running Code", "Talking w/ peer"];
 
     //Session id pulled from url (used for server call)
     const sessionId = searchParams.get('sessionId');
@@ -138,16 +119,45 @@ export default function ObservationScreen() {
     const [recordingTeacherIdBackup, setRecordingTeacherIdBackup] = useState<number[]>([]);
 
 
-    //UseEffect statement to be triggered on component load that uses sessionId to pull additional session info from server
+    //UseEffect statement to be triggered on component load that pulls the session information from local storage and saves it 
     useEffect(() => {
-        if (sessionId) {
-            fetchSessionById(sessionId).then(data => {
-                if (data) {
-                    setSessionData(data);
-                }
-            })
+        //Pull the saved session information from local storage 
+        const sessionInfo = localStorage.getItem("session_info");
+        //Ensure the sessionInfo exists before continuing
+        if (sessionInfo) {
+            try {
+                //Parse the session information but into it's original form and save it in the SessionInfo type
+                const parsedSessionInfo = JSON.parse(sessionInfo);
+                setSessionInfo(parsedSessionInfo);
+            } catch (error) {
+                console.error("Error parsing session info from localStorage:", error);
+            }
         }
-    }, [sessionId]);
+    }, []);
+
+    //UseEffect statement that fires once sessionInfo has been pulled and saved, retrieves the section info for this session 
+    useEffect(() => {
+        //Ensure sessionInfo exists and has a session_id before trying to pull section info
+        if (sessionInfo) {
+            const fetchSessionSections = async () => {
+                try {
+                    //Retrieve session sections using session id and save in state
+                    const sections = await getSessionSectionInfo(String(sessionInfo.session_id));
+                    //If sections is null, set to empty array to avoid errors
+                    if (sections == null) {
+                        setTeacherSections([]);
+                        setStudentSections([]);
+                    } else {
+                        //Otherwise delegate to the seperator function to split the sections and set state
+                        seperateSectionBySegtor(sections);
+                    }
+                } catch (error) {
+                    console.error("Error fetching session sections:", error);
+                }
+            };
+            fetchSessionSections();
+        }
+    }, [sessionInfo]);
 
     //UseEffect to monitor local logs that have been stored when service is offline and send all logs to server when connection is restored
     useEffect(() => {
@@ -178,6 +188,52 @@ export default function ObservationScreen() {
         }
     })
 
+    //Helper function to toggle a student tag in the selectedStudentTags state
+    const toggleStudentTag = (sectionName: string, tag: string) => {
+        setSelectedStudentTags(prev => {
+            const sectionTags = prev[sectionName] || [];
+            if (sectionTags.includes(tag)) {
+                return {
+                    ...prev,
+                    [sectionName]: sectionTags.filter(t => t !== tag)
+                };
+            } else {
+                return {
+                    ...prev,
+                    [sectionName]: [...sectionTags, tag]
+                };
+            }
+        });
+    };
+
+    //Helper function to toggle a teacher tag in the selectedStructureTags state
+    const toggleTeacherTag = (sectionName: string, tag: string) => {
+        setSelectedTeacherTags(prev => {
+            const sectionTags = prev[sectionName] || [];
+            if (sectionTags.includes(tag)) {
+                return {
+                    ...prev,
+                    [sectionName]: sectionTags.filter(t => t !== tag)
+                };
+            } else {
+                return {
+                    ...prev,
+                    [sectionName]: [...sectionTags, tag]
+                };
+            }
+        });
+    };    
+
+    //Helper function that takes all of the session section info and splits into two seperate use State values depending on whether the session_segtor is Teacher or Student
+    const seperateSectionBySegtor = (sectionInfo: SessionSectionInfo[]) => {
+        //Filter out all teacherSections and set the teacherSections state to this array
+        const teacherSections = sectionInfo.filter(section => section.session_segtor === 'Teacher');
+        setTeacherSections(teacherSections);
+        //Filter out all studentSections and set the studentSections state to this array
+        const studentSections = sectionInfo.filter(section => section.session_segtor === 'Student');
+        setStudentSections(studentSections);
+    };
+    
     //Helper function that toggles a string in a useState array for selecting tags
     const toggleStringInArray = (array: string[], item: string): string[] => {
         if (array.includes(item)) {
@@ -187,81 +243,39 @@ export default function ObservationScreen() {
         }
       };
   
+    //Helper function to determine if a tag is selected in the selected teacher tags state
+    const isTeacherTagSelected = (sectionName: string, tag: string): boolean => {
+        const sectionTags = selectedTeacherTags[sectionName] || [];
+        return sectionTags.includes(tag);
+    };
+
+    //Helper function to determine if a tag is selected in the selected student tags state
+    const isStudentTagSelected = (sectionName: string, tag: string): boolean => {
+        const sectionTags = selectedStudentTags[sectionName] || [];
+        return sectionTags.includes(tag);
+    };
+
     //Helper function to clear all user selections when a observation is submitted
     const clearUserSelections = () => {
         if (observingTeacher) {
             setExtraTeacherNote('');
             setBehaviorClass('By Student');
-            setSelectedBehaviorTags([]);
-            setSelectedFunctionTags([]);
-            setSelectedStructureTags([]);
-            setSelectedTeacherCustomTags([]);
+            setSelectedTeacherTags({});
             setTeacherObsStudentId('');
         } else {
             setExtraStudentNote('');
-            setSelectedStudentTags([]);
+            setSelectedStudentTags({});
             setSelectedAffectTags([]);
             setIsStudentOnTask(true);
             setStudentObsStudentId('');
-            setSelectedStudentCustomTags([]);
         }
     }
-    //Helper function to toggle if a student custom tag is selected or not and handle backend operations
-    const toggleStudentCustomTag = async (tag: string) => {
-        //Toggle tag in array
-        setSelectedStudentCustomTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
-
-        //Log press of tag in backend if tag is in custom tags list
-        if (!selectedStudentCustomTags.includes(tag)) {
-            await handleStudentObservationSingleSubmit("custom_tags", tag);
-        }
-    }
-
-    //Helper function to toggle if a student custom tag is selected or not and handle backend operations
-    const toggleTeacherCustomTag = async (tag: string) => {
-        //Toggle tag in array
-        setSelectedTeacherCustomTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
-
-        //Log press of tag in backend if tag is in custom tags list
-        if (!selectedTeacherCustomTags.includes(tag)) {
-            await handleTeacherObservationSingleSubmit("custom_tags", tag);
-        }
-    }
-
-    //Helper function to handle when a teacher behavior tag is clicked
-    const handleTeacherBehaviorTagClick = (tag: string) => {
-        setSelectedBehaviorTags((prevTags: string[]) => {
-            const updated = toggleStringInArray(prevTags, tag);
-    
-            // submit observation if tag is being added
-            if (!prevTags.includes(tag)) {
-                console.log(`[${new Date().toISOString()}] Added ${tag} tag to selected behavior tags.\nBehavior tags is now: ${updated}`)
-                handleTeacherObservationSingleSubmit("behavior_tags", tag);
-            } else {
-                console.log(`[${new Date().toISOString()}] Removed ${tag} tag from selected behavior tags.\nBehavior tags is now: ${updated}`)
-
-            }
-    
-            return updated;
-        });
-    };
 
     //Helper function to handle a teacher position tag click with some added logging
     const handleTeacherPositionTagClick = (tag: string) => {
         setBehaviorClass(tag);
         console.log(`[${new Date().toISOString()}] Setting teacher position to ${tag}`);
     };
-    
-
-    //Helper function to add a new entry in the customTags map
-    const addCustomTag = (key: string, value: string) => {
-        setCustomTags(prevTags => {
-            const newCustomTags = new Map(prevTags);
-            const existing = newCustomTags.get(key) || [];
-            newCustomTags.set(key, [...existing, value]);
-            return newCustomTags;
-        });
-    }
 
     //Helper function
     //Helper function to send teacher observation info to server when the form is officially submitted
@@ -504,8 +518,8 @@ export default function ObservationScreen() {
             <OfflineIndicator/>
             <header className="fixed top-0 left-0 right-0 w-full max-w-[800px] mx-auto h-[51px] bg-[var(--grey-accent)] grid grid-cols-12 items-center">
                 <ArrowLeft className="ml-3 col-span-1 w-[24px] h-[24px]" style={{cursor: 'pointer' }} onClick={() => navigator('/')}  />
-                <p className="text-center col-span-4 text-base">{`Observer: ${sessionData?.observer_name}`}</p>
-                <p className="col-span-7 text-center text-base">{`Start: ${sessionData?.local_time ? formatToMonthDayHourMinute(sessionData.local_time) : 'No time available'}`}</p>
+                <p className="text-center col-span-4 text-base">{`Observer: ${sessionInfo?.observer_name}`}</p>
+                <p className="col-span-7 text-center text-base">{`Start: ${sessionInfo?.local_time ? formatToMonthDayHourMinute(sessionInfo.local_time) : 'No time available'}`}</p>
             </header>
 
             <div className="w-full flex justify-center items-start min-h-[calc(100vh-51px)] overflow-hidden">
@@ -519,100 +533,39 @@ export default function ObservationScreen() {
                     {observingTeacher ? 
                         (
                         <>
-                        <h1 className="text-xl ml-[24px] mt-4">{`Teacher Position`}</h1>
-                        {/* Behavior Tag Options */}
-                        <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
-                            {behaviorTagClassifications.map((tag, index) => (
-                                <button key={index} style={{cursor: 'pointer'}} onClick={() => handleTeacherPositionTagClick(tag)} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${behaviorClass === tag ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
-                            ))}
-                        </div>
-
                         {/*Student ID Button */}
                         <div className="flex mt-4 ml-[24px] items-center">
                             <label htmlFor="studentID" className="text-sm">Student ID </label>
                             <input id="studentID" style={{cursor: 'text'}} type="text" value={teacherObsStudentId} onChange={(e) => setTeacherObsStudentId(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/4"/>
                         </div>
 
-                        <h2 className="text-xl ml-[24px] mt-4">{`Behavior (What?)`}</h2>
+                        <h1 className="text-xl ml-[24px] mt-4">{`Teacher Position`}</h1>
+                        {/* Behavior Tag Options */}
+                        <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
+                            {teacherPositionTags.map((tag, index) => (
+                                <button key={index} style={{cursor: 'pointer'}} onClick={() => handleTeacherPositionTagClick(tag)} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${behaviorClass === tag ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
+                            ))}
+                        </div>
 
-
-                        {/* Behavior Tag Display */}
-                        <div className="mt-2">
-                            <div className="py-3 px-[24px] w-full">
-                                <div className="flex gap-2 flex-wrap items-center">
-                                    {teacherBehaviorTags.map((tag, index) => (
-                                        <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => handleTeacherBehaviorTagClick(tag)} className={`text-sm px-2 py-2 rounded-xl border border-gray-300 ${selectedBehaviorTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
-                                    ))}
-                                    {/* Custom Behavior Tags */}
-                                    {(customTags.get(`behavior_tags`) || []).map((tag, index) => (
-                                        <button
-                                        key={`custom-${index}`}
-                                        onClick={() => toggleTeacherCustomTag(tag)}
-                                        style={{cursor: 'pointer'}}
-                                        className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
-                                        >
-                                        {tag}
-                                        </button>
-                                    ))}
-                                    <button onClick={() => setAddTagModalString('behavior')} style={{cursor: 'pointer'}} className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
-                                    {/* Show Modal only if timeModalOpen is true */}
-                                    { AddTagModalString == 'behavior' && (
-                                        <AddTagModal modalHeader={"Add Behavior Tag"} tagSection={`behavior_tags`} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
-                                    )}
-                                    
+                        {teacherSections.map((section) => {
+                            return (
+                                <div key={section.section_id}>
+                                    <h2 className="text-xl ml-[24px] mt-4">{section.section_name}</h2>
+                                    <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
+                                        {section.tags.map((tag, index) => (
+                                            <button
+                                                key={`${section.section_id}-${index}`}
+                                                style={{cursor: 'pointer'}}
+                                                onClick={() => toggleTeacherTag(section.section_name, tag)}
+                                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${isTeacherTagSelected(section.section_name, tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <h3 className="text-xl ml-[24px] mt-4">{`Function (Why?)`}</h3>
-                        
-                        {/*Function Tag Options */}
-                        <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
-                            {functionTags.map((tag, index) => (
-                                <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => { setSelectedFunctionTags((prevTags: string[]) => toggleStringInArray(prevTags, tag)); !selectedFunctionTags.includes(tag) ? handleTeacherObservationSingleSubmit('function_tags', tag) : null; }} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedFunctionTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
-                            ))}
-                            {/* Custom Function Tags */}
-                            {(customTags.get('function_tags') || []).map((tag, index) => (
-                                <button
-                                key={`custom-${index}`}
-                                style={{cursor: 'pointer'}}
-                                onClick={() => toggleTeacherCustomTag(`${tag} - Function`)}
-                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(`${tag} - Function`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
-                                >
-                                {tag}
-                                </button>
-                            ))}
-                            <button onClick={() => setAddTagModalString('function')} style={{cursor: 'pointer'}} className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
-                            {/* Show Modal only if timeModalOpen is true */}
-                            { AddTagModalString == 'function' && (
-                                <AddTagModal modalHeader={"Add Function Tag"} tagSection={"function_tags"} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
-                            )}
-                        </div>
-
-                        <h4 className="text-xl ml-[24px] mt-4">{`Structure (With what?)`}</h4>
-                        
-                        {/*Structure Tag Options */}
-                        <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
-                            {structureTags.map((tag, index) => (
-                                <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => { setSelectedStructureTags((prevTags: string[]) => toggleStringInArray(prevTags, tag)); !selectedStructureTags.includes(tag) ? handleTeacherObservationSingleSubmit('structure_tags', tag) : null; }} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStructureTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
-                            ))}
-                            {/* Custom Structure Tags */}
-                            {(customTags.get('structure_tags') || []).map((tag, index) => (
-                                <button
-                                key={`custom-${index}`}
-                                style={{cursor: 'pointer'}}
-                                onClick={() => toggleTeacherCustomTag(`${tag} - Structure`)}
-                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(`${tag} - Structure`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
-                                >
-                                {tag}
-                                </button>
-                            ))}
-                            <button onClick={() => setAddTagModalString('structure')} style={{cursor: 'pointer'}} className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
-                            {/* Show Modal only if timeModalOpen is true */}
-                            { AddTagModalString == 'structure' && (
-                                <AddTagModal modalHeader={"Add Structure Tag"} tagSection={"structure_tags"} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
-                            )}
-                        </div>
+                            );
+                        })}
                         {/* Add Note Text Input */}
                         <div className={`mx-[24px] mt-3`}>
                             <SmallTextForm 
@@ -642,25 +595,26 @@ export default function ObservationScreen() {
 
                         {/* Student Tags Section */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center bg-[var(--light-green-accent)] mt-4">
-                            {studentTags.map((tag, index) => (
-                                <button key={index} style={{cursor: 'pointer'}} onClick={() => { setSelectedStudentTags((prevTags: string[]) => toggleStringInArray(prevTags, tag)); !selectedStudentTags.includes(tag) ? handleStudentObservationSingleSubmit('behavior_tags', tag) : null; }} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStudentTags.includes(tag) ? 'bg-[var(--green-accent)] text-white' : 'bg-white'}`}>{tag}</button>
-                            ))}
-                            {/* Custom Student Tags */}
-                            {(customTags.get('student_tags') || []).map((tag, index) => (
-                                <button
-                                key={`custom-${index}`}
-                                style={{cursor: 'pointer'}}
-                                onClick={() => toggleStudentCustomTag(`${tag} - Behavior`)}
-                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedStudentCustomTags.includes(`${tag} - Behavior`) ? 'bg-[var(--green-accent)] text-white' : 'bg-white' }`}
-                                >
-                                {tag}
-                                </button>
-                            ))}
-                            <button onClick={() => setAddTagModalString('student')} style={{cursor: 'pointer'}} className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
-                            {/* Show Modal only if timeModalOpen is true */}
-                            { AddTagModalString == 'student' && (
-                                <AddTagModal modalHeader={"Add Student Tag"} tagSection={"student_tags"} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
-                            )}
+                        {studentSections.map((section) => {
+                            return (
+                                <div key={section.section_id}>
+                                    <h2 className="text-xl ml-[24px] mt-4">{section.section_name}</h2>
+                                    <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
+                                        {section.tags.map((tag, index) => (
+                                            <button
+                                                key={`${section.section_id}-${index}`}
+                                                style={{cursor: 'pointer'}}
+                                                onClick={() => toggleStudentTag(section.section_name, tag)}
+                                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${isStudentTagSelected(section.section_name, tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
                         </div>
 
                         {/* Student Affect Section */}
@@ -716,7 +670,6 @@ export default function ObservationScreen() {
                     </div>
                 </div>
             </div>
-
         </>
     )
 }

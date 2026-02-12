@@ -5,14 +5,15 @@ const db = require('../config/dbConfig.js');
 
 const TABLE = 'session_section';
     
-exports.create = async function(info) {
+exports.create = async function(info, trx = null) {
+  const dbOrTrx = trx || db;
   const row = {
     session_id: info.session_id,
     session_segtor: info.session_segtor,
     section_name: info.section_name,
   };
 
-  const [section_id] = await db(TABLE).insert(row);
+  const [section_id] = await dbOrTrx(TABLE).insert(row);
   return section_id;
 };
 

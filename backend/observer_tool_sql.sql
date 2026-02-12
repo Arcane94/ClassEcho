@@ -56,7 +56,6 @@ CREATE TABLE section_tag (
     tag_id INT AUTO_INCREMENT PRIMARY KEY,
     section_id INT NOT NULL,
     tag_name VARCHAR(255) NOT NULL,
-    is_selected BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_section 
         FOREIGN KEY (section_id) 
         REFERENCES session_section(section_id) 
@@ -73,10 +72,7 @@ CREATE TABLE teacher_observation (
     student_id VARCHAR(100),
     teacher_position VARCHAR(100),
     start_time DATETIME,
-    behavior_tags JSON,
-    function_tags JSON,
-    structure_tags JSON,
-    custom_tags JSON,
+    selected_tags JSON,
     submitted_by_user BOOLEAN DEFAULT FALSE,
 	recording BOOLEAN DEFAULT NULL,
     note TEXT,
@@ -92,9 +88,8 @@ CREATE TABLE student_observation (
     session_id INT NOT NULL,
     student_id VARCHAR(100),
     start_time DATETIME,
-    behavior_tags JSON,
+    selected_tags JSON,
     affect JSON,
-    custom_tags JSON,
 	submitted_by_user BOOLEAN DEFAULT FALSE,
 	recording BOOLEAN DEFAULT NULL,
     note TEXT,

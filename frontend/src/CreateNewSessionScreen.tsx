@@ -15,6 +15,7 @@ export default function CreateNewSessionScreen() {
     const [sessionName, setSessionName] = useState("");
     const [lessonDescription, setLessonDescription] = useState("");
     const [joinCode, setJoinCode] = useState("");
+    const [isDefaultTags, setIsDefaultTags] = useState(false);
 
     const generateJoinCode = () => {
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -26,8 +27,8 @@ export default function CreateNewSessionScreen() {
     };
 
     return (
-        <div className="w-full h-screen flex items-center justify-center bg-[var(--accent-color)]">
-            <div className="relative w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg">
+        <div className="w-full min-h-screen flex items-center justify-center bg-[var(--accent-color)] py-10">
+            <div className="relative w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg my-6">
                 <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate(-1)} />
                 <h1 className="mt-4 text-2xl lg:text-3xl mb-1 text-center">Create a New Session</h1>
                 <p className="text-md lg:text-lg mb-8 text-center text-[var(--grey-accent-medium)]">Enter your session details below.</p>
@@ -89,21 +90,23 @@ export default function CreateNewSessionScreen() {
                 </div>
 
                 <div className="flex gap-3 mb-6">
-                    <button className="flex-1 bg-[var(--grey-accent-medium)] text-white text-md lg:text-lg py-3 rounded-sm cursor-pointer">
-                        Custom Tags
-                    </button>
-                    <button className="flex-1 bg-[var(--grey-accent-medium)] text-white text-md lg:text-lg py-3 rounded-sm cursor-pointer">
-                        Default Tags
-                    </button>
+                    <div className={`flex flex-col text-white text-md lg:text-lg py-4 px-3 rounded-sm cursor-pointer ${!isDefaultTags ? "bg-[var(--medium-blue-accent)]" : "bg-[var(--grey-accent)]"}`} onClick={() => setIsDefaultTags(false)}>
+                        <p className={`text-center mb-2 ${!isDefaultTags ? "text-white" : "text-black"}`}>Custom Tags</p>
+                        <p className="text-xs text-center lg:text-sm text-[var(--grey-accent-medium)]">Fully customize your tags for this observation session</p> 
+                    </div>
+                    <div className={`flex flex-col text-white text-md lg:text-lg py-4 px-3 rounded-sm cursor-pointer ${isDefaultTags ? "bg-[var(--medium-blue-accent)]" : "bg-[var(--grey-accent)]"}`} onClick={() => setIsDefaultTags(true)}>
+                        <p className={`text-center mb-2 ${isDefaultTags ? "text-white" : "text-black"}`}>Default Tags</p>
+                        <p className="text-xs text-center lg:text-sm text-[var(--grey-accent-medium)]">Start this session with the default tags already added</p> 
+                    </div>
                 </div>
 
                 <button 
                     onClick={() => navigate('/customize-session', { 
-                        state: { name, teacherName, sessionName, lessonDescription, joinCode } 
+                        state: { name, teacherName, sessionName, lessonDescription, joinCode, isDefaultTags } 
                     })}
                     className="mt-2 w-full bg-[var(--green-accent)] text-white text-lg py-3 px-4 rounded-sm cursor-pointer"
                 >
-                    Create Session
+                    Next
                 </button>
             </div>
         </div>
