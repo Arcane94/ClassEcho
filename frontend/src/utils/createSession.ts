@@ -37,7 +37,9 @@ export async function createSession(data: CreateSessionPayload): Promise<{ sessi
     });
 
     if (!response.ok) {
-      throw new Error("Failed to create session");
+      const errorData = await response.json();
+      console.log("API Error:", errorData);
+      throw new Error(errorData.message || "Failed to create session");
     }
 
     const result = await response.json();

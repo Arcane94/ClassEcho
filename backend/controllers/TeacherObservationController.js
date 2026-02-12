@@ -15,10 +15,7 @@ exports.createTeacherObservation = async (req, res) => {
       session_id,
       student_id,
       teacher_position,
-      behavior_tags,
-      structure_tags,
-      function_tags,
-      custom_tags,
+      selected_tags,
       submitted_by_user,
       single_click,
       recording,
@@ -26,14 +23,7 @@ exports.createTeacherObservation = async (req, res) => {
     } = req.body;
 
     // Ensure all required fields are given if this is not a single click observation
-    if (
-      !single_click &&
-      (!session_id ||
-      !Array.isArray(behavior_tags) ||
-      !Array.isArray(structure_tags) ||
-      !Array.isArray(function_tags) ||
-      !Array.isArray(custom_tags))
-    ) {
+    if (!single_click && !session_id && !teacher_position) {
       //Alert frontend if any fields are missing
       console.log('problem');
       return res.status(400).json({ error: 'Missing or invalid required fields' });
@@ -47,10 +37,7 @@ exports.createTeacherObservation = async (req, res) => {
       session_id,
       student_id,
       teacher_position,
-      behavior_tags,
-      structure_tags,
-      function_tags,
-      custom_tags,
+      selected_tags,
       submitted_by_user: submitted_by_user ?? false, // default false if undefined
       recording: recording == null ? null : !!recording,
       picture_attachments: picture_attachments ?? null,
@@ -67,7 +54,10 @@ exports.createTeacherObservation = async (req, res) => {
     return res.status(201).json({ id: newObservationId });
   } catch (err) {
     console.error('Unexpected error creating teacher observation', err);
-    return res.status(500).json({ error: 'Unexpected Teacher Observation Creation Error' });
+    return res.status(500).json({
+      error: 'Unexpected Teacher Observation Creation Error',
+      message: err.message
+    });
   }
 };
 

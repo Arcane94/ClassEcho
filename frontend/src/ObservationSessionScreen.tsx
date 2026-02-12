@@ -10,7 +10,6 @@ import startRecordPng from "./assets/images/start_recording.png";
 import stopRecordSvg from "./assets/images/stop_recording.svg";
 import { useNavigate } from "react-router-dom";
 import { getCurrentTimeFormatted } from "./utils/getCurrentTimeFormatted";
-import AddTagModal from "./components/AddTagModal";
 import FadeOutText from "./components/FadeOutText";
 import { useSearchParams } from "react-router-dom";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
