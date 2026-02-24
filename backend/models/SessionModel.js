@@ -28,6 +28,35 @@ exports.create = async function(info, trx = null) {
   return session_id;
 };
 
+// Updates a session's information in the database given a session id and an object containing the updated information, returns the number of rows updated
+exports.updateBySessionId = async function (session_id, updatedInfo) {
+  const row = {};
+  if (updatedInfo.observer_name !== undefined) {
+    row.observer_name = updatedInfo.observer_name;
+  }
+  if (updatedInfo.teacher_name !== undefined) {
+    row.teacher_name = updatedInfo.teacher_name;
+  }
+  if (updatedInfo.session_name !== undefined) {
+    row.session_name = updatedInfo.session_name;
+  }
+  if (updatedInfo.lesson_description !== undefined) {
+    row.lesson_description = updatedInfo.lesson_description;
+  }
+  if (updatedInfo.observers !== undefined) {
+    row.observers = JSON.stringify(updatedInfo.observers);
+  }
+  if (updatedInfo.editors !== undefined) {
+    row.editors = JSON.stringify(updatedInfo.editors);
+  }
+
+  const updatedRows = await db(TABLE)
+    .where({ session_id })
+    .update(row);
+  //Returns the number of rows updated
+  return updatedRows;
+}
+
 exports.getById = async function (session_id) {
   const row = await db(TABLE).where({session_id}).first();
   return row || null;

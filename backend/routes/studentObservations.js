@@ -10,5 +10,9 @@ const studentController = require('../controllers/StudentObservationController.j
 router.post('/', studentController.createStudentObservation);
 //Post route to delete a new student observation
 router.post('/delete', studentController.deleteStudentObservation);
+//Get all observations for a session
+router.get('/session/:session_id', studentController.getObservationsBySessionId);
+//Get a single observation by id
+router.get('/:id', studentController.getObservationById);
 
 module.exports = router;

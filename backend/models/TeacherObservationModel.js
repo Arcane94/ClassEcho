@@ -83,3 +83,15 @@ exports.update = async function (id, patch) {
   }
   return await db(TABLE).where({id}).update(upd);
 }
+
+//Return all observations for a given session id
+exports.getBySessionId = async function (session_id) {
+  const rows = await db(TABLE).where({session_id});
+  return rows || [];
+};
+
+//Return a single observation by its id
+exports.getById = async function (id) {
+  const row = await db(TABLE).where({id}).first();
+  return row || null;
+};

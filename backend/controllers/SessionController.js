@@ -64,7 +64,6 @@ exports.createSession = async (req, res) => {
                   const tag_id = await SectionTag.create({
                     section_id,
                     tag_name: tag.tag_name,
-                    is_selected: tag.is_selected ?? false,
                   }, trx);
                   createdTags.push({ tag_id, tag_name: tag.tag_name });
                 }
@@ -160,4 +159,49 @@ exports.getSessionSections = async (req, res) => {
     console.error('Error fetching session sections:', err);
     return res.status(500).json({ error: 'Server error' });
   }
+};
+
+//Updates a sessions observers array using the sessions id and the user id to add
+//PUT /sessions/:id/observers
+exports.addObserverToSession = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { user_id } = req.body;
+    if (user_id === undefined || user_id === null) {
+            return res.status(400).json({ error: 'Missing user_id in request body' });
+        }
+        const session = await Session.getById(id);
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        let observers = [];
+    if (Array.isArray(session.observers)) {
+      observers = session.observers;
+    } else if (typeof session.observers === 'string') {
+      try {
+        const parsedObservers = JSON.parse(session.observers);
+        observers = Array.isArray(parsedObservers) ? parsedObservers : [];
+      } catch (_parseError) {
+        observers = [];
+      }
+    } else if (session.observers && typeof session.observers === 'object') {
+      observers = Array.isArray(session.observers) ? session.observers : [];
+        }
+
+    const normalizedUserId = Number(user_id);
+    const userIdToStore = Number.isNaN(normalizedUserId) ? user_id : normalizedUserId;
+
+    if (!observers.map(observerId => String(observerId)).includes(String(userIdToStore))) {
+      observers.push(userIdToStore);
+            const rowsUpdated = await Session.updateBySessionId(id, { observers });
+            if (rowsUpdated != 1) {
+                return res.status(500).json({ error: 'Failed to update session observers' });
+            }
+        }
+
+        return res.json({ message: 'Session observers updated successfully' });
+    } catch (err) {
+        console.error('Error updating session observers:', err);
+        return res.status(500).json({ error: 'Server error' });
+    }
 };

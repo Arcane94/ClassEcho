@@ -2,17 +2,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 //File Imports
 import LargeTextForm from "./components/LargeTextForm";
 import { getSessionByJoinCode } from "./utils/getSessionByJoinCode";
 
 export default function JoinExistingSessionScreen() {
+    //Search params
+    const searchParams = useSearchParams();
     //State to hold name, joinCode, and errorMsg inputs
     const [name, setName] = useState(localStorage.getItem('username') || "");
     //boolean to switch view if a session is found
     const [sessionFound, setSessionFound] = useState(false);
-    const [joinCode, setJoinCode] = useState("");
+    const [joinCode, setJoinCode] = useState(searchParams[0].get('joinCode') || "");
     const [errorMsg, setErrorMsg] = useState("");
 
     //Set up navigator
@@ -29,6 +32,7 @@ export default function JoinExistingSessionScreen() {
                 setSessionFound(true);
                 //Store sessionInfo session object in localStorage for use later
                 localStorage.setItem("session_info", JSON.stringify(sessionInfo.session));
+                console.log("Saved session_info to localStorage:", sessionInfo.session);
             } else {
                 setErrorMsg(sessionInfo.error || "Failed to find session");
             }
@@ -73,7 +77,7 @@ export default function JoinExistingSessionScreen() {
                         </div>
 
                         {/* Join button */}
-                        <button className="rounded-sm bg-[var(--green-accent)] text-black py-2 px-4 w-full mt-3 cursor-pointer">Join Session as {name}</button>
+                        <button className="rounded-sm bg-[var(--green-accent)] text-black py-2 px-4 w-full mt-3 cursor-pointer" onClick={() => navigate('/observation-session')}>Join Session as {name}</button>
 
                         {/* Cancel Button */}
                         <div className="flex justify-end mt-3">

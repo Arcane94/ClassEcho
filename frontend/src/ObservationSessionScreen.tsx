@@ -10,8 +10,8 @@ import startRecordPng from "./assets/images/start_recording.png";
 import stopRecordSvg from "./assets/images/stop_recording.svg";
 import { useNavigate } from "react-router-dom";
 import { getCurrentTimeFormatted } from "./utils/getCurrentTimeFormatted";
+import AddTagModal from "./components/AddTagModal";
 import FadeOutText from "./components/FadeOutText";
-import { useSearchParams } from "react-router-dom";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
 import { createTeacherObservation } from "./utils/createTeacherObservation";
 import { createStudentObservation } from "./utils/createStudentObservation";
@@ -35,6 +35,10 @@ import tiredAffectIcon from "./assets/images/tired_affect.svg";
 import sadAffectIcon from "./assets/images/sad_affect.svg";
 
 import { storeObservationLocally, offlineLogging } from "./utils/offlineQueue";
+import { updateSessionObservers } from "./utils/updateSessionObservers";
+import { updateUserSessions } from "./utils/updateUserSessions";
+import { exportStudentObservationsToCSV } from "./utils/exportStudentObservationsToCSV";
+import { exportTeacherObservationsToCSV } from "./utils/exportTeacherObservationsToCSV";
 
 //Defines the behavior and design of the screen allowing users to make observations on both teachers an students
 export default function ObservationSessionScreen() {
@@ -42,8 +46,11 @@ export default function ObservationSessionScreen() {
     //Navigator
     const navigator = useNavigate();
 
-    //Pull search params to get session id
-    const [searchParams] = useSearchParams();
+    //Flag to store if the joined session's observer array has been updated with this user's id and if the user's sessions array has been updated with this session's id
+    const [sessionJoinLogged, setSessionJoinLogged] = useState(false);
+
+    //State to store id of the user
+    const [userId, setUserId] = useState<string | null>(null);
 
     //State to store sessionInfo for this session, stored together as this should not change
     const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
@@ -56,6 +63,9 @@ export default function ObservationSessionScreen() {
 
     //State to store the category, if any, that the add tag modal is opened for
     const [AddTagModalString, setAddTagModalString] = useState('');
+
+    //State to store custom tags keyed by section key (teacher:<section> or student:<section>)
+    const [customTags, setCustomTags] = useState<Map<string, string[]>>(new Map());
 
     //State to store if a student is on task (if false assume off task)
     const [isStudentOnTask, setIsStudentOnTask] = useState(true);
@@ -106,7 +116,7 @@ export default function ObservationSessionScreen() {
     const studentAffectIcons = [excitedAffectIcon, excitedAffectIcon, happyAffectIcon, relaxedAffectIcon, tiredAffectIcon, boredAffectIcon, sadAffectIcon, confusedAffectIcon, frustratedAffectIcon, angryAffectIcon, happyAffectIcon, boredAffectIcon];
 
     //Session id pulled from url (used for server call)
-    const sessionId = searchParams.get('sessionId');
+    const [sessionId, setSessionId] = useState(0);
 
     //Tick counter that allows observation time to have a new key when updated
     const [observationTick, setObservationTick] = useState(0);
@@ -117,9 +127,30 @@ export default function ObservationSessionScreen() {
     //An array of single-click teacher observation ids that are saved when a user is recording, exists so these can be removed from database if record is cancelled
     const [recordingTeacherIdBackup, setRecordingTeacherIdBackup] = useState<number[]>([]);
 
-
+    //UseEffect statement to be triggered when sessionId is populated, triggers two API calls to update user and session information in database
+    useEffect(() => {
+        const logSessionJoin = async () => {
+            if (sessionId && userId && !sessionJoinLogged) {
+                try {
+                    //Call util functions to update both user and session information in database with this join
+                    await updateSessionObservers(sessionId, Number(userId));
+                    await updateUserSessions(Number(userId), sessionId);
+                    console.log(`Logged session join for user ${userId} and session ${sessionId}`);
+                    setSessionJoinLogged(true);
+                } catch (error) {
+                    console.error("Error logging session join:", error);
+                }
+            }
+        };
+        logSessionJoin();
+    }, [sessionId]);
+                    
     //UseEffect statement to be triggered on component load that pulls the session information from local storage and saves it 
     useEffect(() => {
+        //Pull the user id from local storage
+        const userId = localStorage.getItem("user_id");
+        //Set user id state
+        setUserId(userId ? userId : null);
         //Pull the saved session information from local storage 
         const sessionInfo = localStorage.getItem("session_info");
         //Ensure the sessionInfo exists before continuing
@@ -127,6 +158,7 @@ export default function ObservationSessionScreen() {
             try {
                 //Parse the session information but into it's original form and save it in the SessionInfo type
                 const parsedSessionInfo = JSON.parse(sessionInfo);
+                console.log("Loaded session_info from localStorage:", parsedSessionInfo);
                 setSessionInfo(parsedSessionInfo);
             } catch (error) {
                 console.error("Error parsing session info from localStorage:", error);
@@ -147,6 +179,8 @@ export default function ObservationSessionScreen() {
                         setTeacherSections([]);
                         setStudentSections([]);
                     } else {
+                        //Set session id state
+                        setSessionId(sessionInfo.session_id);
                         //Otherwise delegate to the seperator function to split the sections and set state
                         seperateSectionBySegtor(sections);
                     }
@@ -241,6 +275,37 @@ export default function ObservationSessionScreen() {
           return [...array, item];
         }
       };
+
+    //Builds the key used to store custom tags for teacher/student section pairs
+    const buildCustomTagKey = (isTeacherSection: boolean, sectionName: string): string => {
+        return `${isTeacherSection ? 'teacher' : 'student'}:${sectionName}`;
+    };
+
+    //Returns the current custom tags for a teacher/student section
+    const getCustomTagsForSection = (isTeacherSection: boolean, sectionName: string): string[] => {
+        return customTags.get(buildCustomTagKey(isTeacherSection, sectionName)) || [];
+    };
+
+    //Adds a custom tag to local state only (does not add tag definitions to database)
+    const addCustomTag = (key: string, value: string) => {
+        const cleanedValue = value.trim();
+        if (!cleanedValue) {
+            return;
+        }
+
+        setCustomTags(prevTags => {
+            const updatedTags = new Map(prevTags);
+            const existingTags = updatedTags.get(key) || [];
+
+            if (!existingTags.includes(cleanedValue)) {
+                updatedTags.set(key, [...existingTags, cleanedValue]);
+            }
+
+            return updatedTags;
+        });
+
+        console.log(`[${new Date().toISOString()}] Added custom tag "${cleanedValue}" to ${key}`);
+    };
   
     //Helper function to determine if a tag is selected in the selected teacher tags state
     const isTeacherTagSelected = (sectionName: string, tag: string): boolean => {
@@ -279,16 +344,17 @@ export default function ObservationSessionScreen() {
     //Helper function
     //Helper function to send teacher observation info to server when the form is officially submitted
     const handleTeacherObservationSubmit = async (recording?: boolean) => {
+        if (!sessionInfo?.session_id || sessionInfo.session_id === 0) {
+            console.error("Cannot submit teacher observation: invalid session_id", sessionInfo);
+            return;
+        }
         //Built data to send to util function
         const teacherObsData: any = {
-            session_id: Number(sessionId),
+            session_id: sessionInfo?.session_id,
             //Ensure difference between teacher and student form ids
             student_id: teacherObsStudentId,
             teacher_position: behaviorClass,
-            behavior_tags: selectedBehaviorTags,
-            function_tags: selectedFunctionTags,
-            structure_tags: selectedStructureTags,
-            custom_tags: selectedTeacherCustomTags,
+            selected_tags: selectedTeacherTags,
             submitted_by_user: true,
             note: extraTeacherNote,
             //New tag sent only to controller in server to loosen error-checking for single click observations
@@ -323,7 +389,7 @@ export default function ObservationSessionScreen() {
 
         //Built data to send to util function
         const teacherObsData: any = {
-            session_id: Number(sessionId),
+            session_id: sessionInfo?.session_id,
             //Ensure difference between teacher and student form ids
             student_id: teacherObsStudentId,
             [tagCategory]: singleTagArray,
@@ -349,12 +415,11 @@ export default function ObservationSessionScreen() {
     const handleStudentObservationSubmit = async (recording?: boolean) => {
         //Built data to send to util function
         const studentObsData: any = {
-            session_id: Number(sessionId),
+            session_id: sessionInfo?.session_id,
             //Ensure difference between teacher and student form ids
             student_id: studentObsStudentId,
-            behavior_tags: selectedStudentTags,
+            selected_tags: selectedStudentTags,
             affect: selectedAffectTags,
-            custom_tags: selectedStudentCustomTags,
             submitted_by_user: true,
             note: extraStudentNote,
             //New tag sent only to controller in server to loosen error-checking for single click observations
@@ -389,7 +454,7 @@ export default function ObservationSessionScreen() {
 
         //Built data to send to util function
         const studentObsData: any = {
-            session_id: Number(sessionId),
+            session_id: sessionInfo?.session_id,
             //Ensure difference between teacher and student form ids
             student_id: studentObsStudentId,
             [tagCategory]: singleTagArray,
@@ -407,7 +472,7 @@ export default function ObservationSessionScreen() {
             }
         } catch (error) {
             console.error('Failed to submit student observation', error);
-            console.log('Adding Teacher Single Submit Observation to waiting logs.')
+            console.log('Adding Student Single Submit Observation to waiting logs.')
             storeObservationLocally(studentObsData);
         }
     }
@@ -516,7 +581,7 @@ export default function ObservationSessionScreen() {
             {/* Offline indicator that is loaded when user is offline */}
             <OfflineIndicator/>
             <header className="fixed top-0 left-0 right-0 w-full max-w-[800px] mx-auto h-[51px] bg-[var(--grey-accent)] grid grid-cols-12 items-center">
-                <ArrowLeft className="ml-3 col-span-1 w-[24px] h-[24px]" style={{cursor: 'pointer' }} onClick={() => navigator('/')}  />
+                <ArrowLeft className="ml-3 col-span-1 w-[24px] h-[24px]" style={{cursor: 'pointer' }} onClick={() => navigator(-1)}  />
                 <p className="text-center col-span-4 text-base">{`Observer: ${sessionInfo?.observer_name}`}</p>
                 <p className="col-span-7 text-center text-base">{`Start: ${sessionInfo?.local_time ? formatToMonthDayHourMinute(sessionInfo.local_time) : 'No time available'}`}</p>
             </header>
@@ -547,6 +612,8 @@ export default function ObservationSessionScreen() {
                         </div>
 
                         {teacherSections.map((section) => {
+                            const customTagKey = buildCustomTagKey(true, section.section_name);
+                            const sectionCustomTags = getCustomTagsForSection(true, section.section_name);
                             return (
                                 <div key={section.section_id}>
                                     <h2 className="text-xl ml-[24px] mt-4">{section.section_name}</h2>
@@ -555,12 +622,42 @@ export default function ObservationSessionScreen() {
                                             <button
                                                 key={`${section.section_id}-${index}`}
                                                 style={{cursor: 'pointer'}}
-                                                onClick={() => toggleTeacherTag(section.section_name, tag)}
+                                                onClick={() => { toggleTeacherTag(section.section_name, tag); !isTeacherTagSelected(section.section_name, tag) ? handleTeacherObservationSingleSubmit('selected_tags', tag) : null}}
                                                 className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${isTeacherTagSelected(section.section_name, tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}
                                             >
                                                 {tag}
                                             </button>
                                         ))}
+                                        {sectionCustomTags.map((tag, index) => (
+                                            <button
+                                                key={`${customTagKey}-${index}`}
+                                                style={{cursor: 'pointer'}}
+                                                onClick={() => {
+                                                    toggleTeacherTag(section.section_name, tag);
+                                                    !isTeacherTagSelected(section.section_name, tag)
+                                                        ? handleTeacherObservationSingleSubmit('selected_tags', tag)
+                                                        : null;
+                                                }}
+                                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${isTeacherTagSelected(section.section_name, tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={() => setAddTagModalString(customTagKey)}
+                                            style={{cursor: 'pointer'}}
+                                            className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'
+                                        >
+                                            +
+                                        </button>
+                                        {AddTagModalString === customTagKey && (
+                                            <AddTagModal
+                                                modalHeader={`Add ${section.section_name} Tag`}
+                                                tagSection={customTagKey}
+                                                onAddTag={addCustomTag}
+                                                onClose={() => setAddTagModalString('')}
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -595,6 +692,8 @@ export default function ObservationSessionScreen() {
                         {/* Student Tags Section */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center bg-[var(--light-green-accent)] mt-4">
                         {studentSections.map((section) => {
+                            const customTagKey = buildCustomTagKey(false, section.section_name);
+                            const sectionCustomTags = getCustomTagsForSection(false, section.section_name);
                             return (
                                 <div key={section.section_id}>
                                     <h2 className="text-xl ml-[24px] mt-4">{section.section_name}</h2>
@@ -603,12 +702,42 @@ export default function ObservationSessionScreen() {
                                             <button
                                                 key={`${section.section_id}-${index}`}
                                                 style={{cursor: 'pointer'}}
-                                                onClick={() => toggleStudentTag(section.section_name, tag)}
+                                                onClick={() => { toggleStudentTag(section.section_name, tag); !isStudentTagSelected(section.section_name, tag) ? handleStudentObservationSingleSubmit('selected_tags', tag) : null}}
                                                 className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${isStudentTagSelected(section.section_name, tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}
                                             >
                                                 {tag}
                                             </button>
                                         ))}
+                                        {sectionCustomTags.map((tag, index) => (
+                                            <button
+                                                key={`${customTagKey}-${index}`}
+                                                style={{cursor: 'pointer'}}
+                                                onClick={() => {
+                                                    toggleStudentTag(section.section_name, tag);
+                                                    !isStudentTagSelected(section.section_name, tag)
+                                                        ? handleStudentObservationSingleSubmit('selected_tags', tag)
+                                                        : null;
+                                                }}
+                                                className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${isStudentTagSelected(section.section_name, tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}
+                                            >
+                                                {tag}
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={() => setAddTagModalString(customTagKey)}
+                                            style={{cursor: 'pointer'}}
+                                            className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'
+                                        >
+                                            +
+                                        </button>
+                                        {AddTagModalString === customTagKey && (
+                                            <AddTagModal
+                                                modalHeader={`Add ${section.section_name} Tag`}
+                                                tagSection={customTagKey}
+                                                onAddTag={addCustomTag}
+                                                onClose={() => setAddTagModalString('')}
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -650,6 +779,24 @@ export default function ObservationSessionScreen() {
                             {observationTime && 
                                 <FadeOutText key={`${observationTick}`} delay={5000} text={`Observation recorded at ${observationTime}.`} className="text-[var(--green-accent)] text-sm" />
                             }
+                            {observingTeacher && sessionInfo && (
+                                <button 
+                                    onClick={() => exportTeacherObservationsToCSV(sessionInfo.session_id)}
+                                    className="bg-[var(--accent-color)] text-white px-3 py-1 rounded text-sm hover:opacity-90"
+                                    style={{cursor: 'pointer'}}
+                                >
+                                    Export Teacher Data
+                                </button>
+                            )}
+                            {!observingTeacher && sessionInfo && (
+                                <button 
+                                    onClick={() => exportStudentObservationsToCSV(sessionInfo.session_id)}
+                                    className="bg-[var(--green-accent)] text-white px-3 py-1 rounded text-sm hover:opacity-90"
+                                    style={{cursor: 'pointer'}}
+                                >
+                                    Export Student Data
+                                </button>
+                            )}
                         </div>
                         <div>
                             {(!isRecordingTeacherObs && !isRecordingStudentObs) ?

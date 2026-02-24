@@ -10,7 +10,6 @@ exports.create = async function(info, trx = null) {
   const row = {
     section_id: info.section_id,
     tag_name: info.tag_name,
-    is_selected: info.is_selected ?? false,
   };
 
   const [tag_id] = await dbOrTrx(TABLE).insert(row);

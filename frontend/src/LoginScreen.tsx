@@ -47,8 +47,17 @@ export default function LoginScreen() {
                 <h1 className="mt-4 text-2xl lg:text-3xl mb-1 text-center">Welcome to ClassEcho!</h1>
                 <p className= "text-md lg:text-lg mb-8 text-center text-[var(--grey-accent-medium)]">Please log in to your account.</p>
 
-                <LargeTextForm label="Username" placeholder="Enter your username" value={username} onChange={(e) => setUsername(e.target.value)} className="mb-6 placeholder:text-[18px] lg:placeholder:text-base" />
+                <LargeTextForm label="Username/Email" placeholder="Enter your username or email" value={username} onChange={(e) => setUsername(e.target.value)} className="mb-6 placeholder:text-[18px] lg:placeholder:text-base" />
                 <LargeTextForm label="Password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="mb-4 placeholder:text-[18px] lg:placeholder:text-base" />
+                <div className="mb-4 text-right">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/forgot-password")}
+                        className="text-sm text-[var(--accent-color)] cursor-pointer"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
                 {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
 
                 <button onClick={handleLogin} className="mt-6 w-full bg-[var(--green-accent)] text-white text-lg py-3 px-4 rounded-sm cursor-pointer">Log In</button>

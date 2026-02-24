@@ -10,8 +10,10 @@ CREATE TABLE observer_user (
     username VARCHAR(100) NOT NULL UNIQUE,
     hashed_password VARCHAR(255) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    -- List of the ids of all sessions that belong to this user
-    sessions JSON
+    -- List of the ids of all sessions that this user has accessed
+    sessions JSON,
+    -- List of the ids of all sessions that this user has edit access to
+    edit_sessions JSON
 );
 
 -- =========================
@@ -48,7 +50,7 @@ CREATE TABLE session_section (
         FOREIGN KEY (session_id) 
         REFERENCES session(session_id) 
         ON DELETE CASCADE,
-    INDEX idx_session_id (session_id),
+    INDEX idx_session_id (session_id)
 );
 
 -- Tags table

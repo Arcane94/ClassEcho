@@ -37,7 +37,7 @@ export default function CreateAccountScreen() {
         <div className="w-full h-screen flex items-center justify-center bg-[var(--accent-color)]">
             <div className="w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg">
                 <h1 className="mt-4 mb-5 text-2xl lg:text-3xl mb-1 text-center">Create your ClassEcho account!</h1>
-                <LargeTextForm label="Username" placeholder="Choose a username" value={username} onChange={(e) => setUsername(e.target.value)} className="mb-6 placeholder:text-[18px] lg:placeholder:text-base " />
+                <LargeTextForm label="Username/Email" placeholder="Choose a username or email" value={username} onChange={(e) => setUsername(e.target.value)} className="mb-6 placeholder:text-[18px] lg:placeholder:text-base " />
                 <LargeTextForm label="Password" placeholder="Choose a password" value={password} onChange={(e) => setPassword(e.target.value)} className="mb-4 placeholder:text-[18px] lg:placeholder:text-base" />
                 {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
 

@@ -21,4 +21,7 @@ router.get('/:id/sections', sessionController.getSessionSections);
 //Get Route to retrieve session information using join code
 router.get('/join/:join_code', sessionController.getSessionByJoinCode);
 
+//PUT route to update session observers with a user id
+router.put('/:id/observers', sessionController.addObserverToSession);
+
 module.exports = router;
