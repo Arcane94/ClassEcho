@@ -14,7 +14,7 @@ export default function SessionOptionsScreen() {
                 <h1 className="mt-4 text-2xl lg:text-3xl mb-1 text-center">Welcome to ClassEcho!</h1>
                 <p className="text-md lg:text-lg mb-8 text-center text-[var(--grey-accent-medium)]">How would you like to proceed</p>
 
-                <div className="flex items-center justify-center border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/create-new")}>
+                <div className="flex items-center justify-left border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/create-new")}>
                     {/* Icon Div */}
                     <div className="rounded-lg bg-[var(--accent-color)] p-2">
                         <PlusCircle style={{ color: 'black'}} size={30} />
@@ -26,7 +26,7 @@ export default function SessionOptionsScreen() {
                     </div>
                 </div>
 
-                <div className="flex items-center mt-6 justify-center border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/join-existing")}>
+                <div className="flex items-center mt-6 justify-left border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/join-existing")}>
                     {/* Icon Div */}
                     <div className="rounded-lg bg-[var(--green-accent)] p-2">
                         <Layers style={{ color: 'black'}} size={30} />
@@ -38,7 +38,7 @@ export default function SessionOptionsScreen() {
                     </div>
                 </div>
 
-                <div className="flex items-center mt-6 justify-center border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/view-sessions")}>
+                <div className="flex items-center mt-6 justify-left border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/view-sessions")}>
                     {/* Icon Div */}
                     <div className="rounded-lg bg-[var(--snapclass-yellow)] p-2">
                         <Eye style={{ color: 'black'}} size={30} />
@@ -49,7 +49,7 @@ export default function SessionOptionsScreen() {
                         <p className="text-[var(--grey-accent-medium)] text-xs">View and rejoin any of the sessions that you have joined in the past.</p>
                     </div>
                 </div>
-                    <div className="flex items-center mt-6 justify-center border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/manage-sessions")}>
+                    <div className="flex items-center mt-6 justify-left border border-[var(--grey-accent-medium)] shadow-lg rounded-lg py-2 px-2 gap-4 cursor-pointer" onClick={() => navigate("/manage-sessions")}>
                     {/* Icon Div */}
                     <div className="rounded-lg bg-[var(--medium-blue-accent)] p-2">
                         <PenSquare style={{ color: 'black'}} size={30} />

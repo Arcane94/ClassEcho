@@ -44,8 +44,8 @@ exports.updateByUserId = async function (user_id, updatedInfo) {
 exports.getByUserId = async function (user_id) {
   const row = await db(TABLE).where({user_id}).first();
   if (row) {
-    row.sessions = JSON.parse(row.sessions || "[]");
-    row.edit_sessions = JSON.parse(row.edit_sessions || "[]");
+    row.sessions = row.sessions || "[]";
+    row.edit_sessions = row.edit_sessions || "[]";
   }
   return row || null;
 };
@@ -64,8 +64,8 @@ exports.getByUsername = async function (username) {
     .where({ username })
     .first();
   if (row) {
-    row.sessions = JSON.parse(row.sessions || "[]");
-    row.edit_sessions = JSON.parse(row.edit_sessions || "[]");
+    row.sessions = row.sessions ?? "[]";
+    row.edit_sessions = row.edit_sessions ?? "[]";
   }
   return row || null;
 };

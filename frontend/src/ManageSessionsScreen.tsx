@@ -99,12 +99,12 @@ export default function ManageSessionsScreen() {
                                         className="w-full bg-[var(--green-accent)] text-black py-2 px-4 rounded-sm cursor-pointer hover:opacity-90"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            console.log('Rejoin session:', session.session_id);
-                                            //Navigate to the join-existing screen and save join code in search params
-                                            navigate(`/join-existing?joinCode=${session.join_code}`);
+                                            console.log('Manage session:', session.session_id);
+                                            //Navigate to the manage session screen and save session_id in search params
+                                            navigate(`/manage-session?sessionId=${session.session_id}`);
                                         }}
                                     >
-                                        Rejoin Session
+                                        Manage Session
                                     </button>
                                 </div>
                             )}

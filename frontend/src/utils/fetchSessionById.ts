@@ -26,9 +26,12 @@ export interface SessionData {
         throw new Error("Failed to fetch session data");
       }
       
-      //Save and return collected data
-      const data: SessionData = await response.json();
-      return data;
+      //Save and normalize collected data
+      const data = await response.json();
+      return {
+        ...data,
+        lesson_name: data.lesson_name ?? data.session_name ?? "",
+      } as SessionData;
   
     } catch (error) {
       console.error("Error fetching session:", error);

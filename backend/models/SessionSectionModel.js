@@ -33,3 +33,12 @@ exports.getAllSectionsBySegtorAndId = async function (session_segtor, session_id
   const rows = await db(TABLE).where({session_segtor, session_id});
   return rows || [];
 }
+
+// Deletes all sections for a given session id
+exports.deleteBySessionId = async function (session_id, trx = null) {
+  const dbOrTrx = trx || db;
+  const deletedRows = await dbOrTrx(TABLE)
+    .where({ session_id })
+    .del();
+  return deletedRows;
+}

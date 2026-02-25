@@ -17,6 +17,9 @@ router.get('/:id', userController.getUserById);
 //PUT route to update a user's sessions array with a new session id
 router.put('/:id/sessions', userController.updateUserSessions);
 
+//PUT route to update a user's edit_sessions array with a new session id
+router.put('/:id/sessions/edit', userController.updateUserEditSessions);
+
 //GET route to retrieve information of all sessions
 router.get('/:id/sessions/all', userController.getUserSessions);
 

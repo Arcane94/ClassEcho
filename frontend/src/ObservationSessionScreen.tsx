@@ -37,8 +37,6 @@ import sadAffectIcon from "./assets/images/sad_affect.svg";
 import { storeObservationLocally, offlineLogging } from "./utils/offlineQueue";
 import { updateSessionObservers } from "./utils/updateSessionObservers";
 import { updateUserSessions } from "./utils/updateUserSessions";
-import { exportStudentObservationsToCSV } from "./utils/exportStudentObservationsToCSV";
-import { exportTeacherObservationsToCSV } from "./utils/exportTeacherObservationsToCSV";
 
 //Defines the behavior and design of the screen allowing users to make observations on both teachers an students
 export default function ObservationSessionScreen() {
@@ -779,24 +777,6 @@ export default function ObservationSessionScreen() {
                             {observationTime && 
                                 <FadeOutText key={`${observationTick}`} delay={5000} text={`Observation recorded at ${observationTime}.`} className="text-[var(--green-accent)] text-sm" />
                             }
-                            {observingTeacher && sessionInfo && (
-                                <button 
-                                    onClick={() => exportTeacherObservationsToCSV(sessionInfo.session_id)}
-                                    className="bg-[var(--accent-color)] text-white px-3 py-1 rounded text-sm hover:opacity-90"
-                                    style={{cursor: 'pointer'}}
-                                >
-                                    Export Teacher Data
-                                </button>
-                            )}
-                            {!observingTeacher && sessionInfo && (
-                                <button 
-                                    onClick={() => exportStudentObservationsToCSV(sessionInfo.session_id)}
-                                    className="bg-[var(--green-accent)] text-white px-3 py-1 rounded text-sm hover:opacity-90"
-                                    style={{cursor: 'pointer'}}
-                                >
-                                    Export Student Data
-                                </button>
-                            )}
                         </div>
                         <div>
                             {(!isRecordingTeacherObs && !isRecordingStudentObs) ?

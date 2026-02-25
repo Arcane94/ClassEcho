@@ -9,6 +9,7 @@ import DateForm from "./components/DateForm";
 //import ChangeTimeModal from "./components/ChangeTimeModal";
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "./config";
 
 export default function StartForm() {
     //Navigation
@@ -42,14 +43,14 @@ export default function StartForm() {
         const payload = {
             observer_name: username,
             teacher_name: teacherName,
-            lesson_name: lessonTitle,
+            session_name: lessonTitle,
             lesson_description: lessonDescription,
             local_time,
         };
 
         try {
             //Send Post call to backend with form data
-            const res = await fetch('http://localhost:3011/sessions', {
+            const res = await fetch(`${API_BASE_URL}/sessions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json'},
                 body: JSON.stringify(payload),

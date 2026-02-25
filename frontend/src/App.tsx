@@ -14,6 +14,7 @@ import ViewSessionsScreen from './ViewSessionsScreen'
 import ForgotPasswordScreen from './ForgotPassword'
 import ResetPasswordScreen from './ResetPassword'
 import ManageSessionsScreen from './ManageSessionsScreen'
+import ManageIndividualSessionScreen from './ManageIndividualSessionScreen'
 function App() {
   return (
     <Router>
@@ -30,6 +31,7 @@ function App() {
         <Route path="/customize-session" element={<CustomizeSessionScreen />} />
         <Route path="/view-sessions" element={<ViewSessionsScreen />} />
         <Route path="/manage-sessions" element={<ManageSessionsScreen />} />
+        <Route path="/manage-session" element={<ManageIndividualSessionScreen />} />
       </Routes>
     </Router>
   )

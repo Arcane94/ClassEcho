@@ -154,6 +154,56 @@ exports.updateUserSessions = async (req, res) => {
     }
 }
 
+// Logic to update user's edit_sessions array with new session id
+// PUT /user/:id/sessions/edit
+exports.updateUserEditSessions = async (req, res) => {
+    try {
+        //parse id from parameters
+        const { id } = req.params;
+        const { session_id } = req.body;
+        //Ensure session_id is provided
+        if (session_id === undefined || session_id === null) {
+            return res.status(400).json({ error: 'Missing session_id in request body' });
+        }
+        //Retrieve user from database using id
+        const user = await User.getByUserId(id);
+        //If user not found, return error
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        //Parse the user's edit_sessions array, add the new session id, and update in database
+        let edit_sessions = [];
+        if (Array.isArray(user.edit_sessions)) {
+            edit_sessions = user.edit_sessions;
+        } else if (typeof user.edit_sessions === 'string') {
+            try {
+                const parsedEditSessions = JSON.parse(user.edit_sessions);
+                edit_sessions = Array.isArray(parsedEditSessions) ? parsedEditSessions : [];
+            } catch (_parseError) {
+                edit_sessions = [];
+            }
+        } else if (user.edit_sessions && typeof user.edit_sessions === 'object') {
+            edit_sessions = Array.isArray(user.edit_sessions) ? user.edit_sessions : [];
+        }
+
+        const normalizedSessionId = Number(session_id);
+        const sessionIdToStore = Number.isNaN(normalizedSessionId) ? session_id : normalizedSessionId;
+
+        if (!edit_sessions.map(savedSessionId => String(savedSessionId)).includes(String(sessionIdToStore))) {
+            edit_sessions.push(sessionIdToStore);
+            const rowsUpdated = await User.updateByUserId(id, { edit_sessions });
+            if (rowsUpdated != 1) {
+                return res.status(500).json({ error: 'Failed to update user edit sessions' });
+            }
+        }
+
+        return res.json({ message: 'User edit sessions updated successfully' });
+    } catch (err) {
+        console.error('Error updating user edit sessions:', err);
+        return res.status(500).json({ error: 'Server error' });
+    }
+}
+
 //Logic to retrieve all of the session information from the user's sessions array
 //GET /user/:id/sessions
 exports.getUserSessions = async (req, res) => {

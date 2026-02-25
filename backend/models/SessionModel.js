@@ -43,6 +43,9 @@ exports.updateBySessionId = async function (session_id, updatedInfo) {
   if (updatedInfo.lesson_description !== undefined) {
     row.lesson_description = updatedInfo.lesson_description;
   }
+  if (updatedInfo.join_code !== undefined) {
+    row.join_code = updatedInfo.join_code;
+  }
   if (updatedInfo.observers !== undefined) {
     row.observers = JSON.stringify(updatedInfo.observers);
   }
@@ -66,4 +69,12 @@ exports.getById = async function (session_id) {
 exports.getByJoinCode = async function (join_code) {
   const row = await db(TABLE).where({join_code}).first();
   return row || null;
+};
+
+// Deletes a session from the database using its session id
+exports.deleteBySessionId = async function (session_id) {
+  const deletedRows = await db(TABLE)
+    .where({ session_id })
+    .del();
+  return deletedRows;
 };

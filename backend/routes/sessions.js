@@ -15,8 +15,17 @@ router.get('/check', sessionController.checkSession);
 //Get Route to retrieve session information using session id
 router.get('/:id', sessionController.getSessionById);
 
+//PUT route to update session information using session id
+router.put('/:id', sessionController.updateSessionById);
+
+//DELETE route to remove session using session id
+router.delete('/:id', sessionController.deleteSessionById);
+
 //Get Route to retrieve session sections and tags by session id
 router.get('/:id/sections', sessionController.getSessionSections);
+
+//PUT route to replace session sections and tags by session id
+router.put('/:id/sections', sessionController.updateSessionSections);
 
 //Get Route to retrieve session information using join code
 router.get('/join/:join_code', sessionController.getSessionByJoinCode);

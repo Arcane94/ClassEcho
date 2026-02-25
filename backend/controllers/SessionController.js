@@ -106,6 +106,47 @@ exports.getSessionById = async (req, res) => {
     }
   };
 
+//Logic to update basic session information by id
+//PUT /sessions/:id
+exports.updateSessionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      observer_name,
+      teacher_name,
+      session_name,
+      lesson_description,
+      join_code,
+    } = req.body;
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const updatedInfo = {
+      observer_name,
+      teacher_name,
+      session_name,
+      lesson_description,
+    };
+
+    if (join_code !== undefined) {
+      updatedInfo.join_code = join_code;
+    }
+
+    const rowsUpdated = await Session.updateBySessionId(id, updatedInfo);
+    if (rowsUpdated != 1) {
+      return res.status(500).json({ error: 'Failed to update session' });
+    }
+
+    return res.json({ message: 'Session updated successfully' });
+  } catch (err) {
+    console.error('Error updating session:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
 //Logic to retrieve session information from database using join code
 //GET /sessions/:join_code
 exports.getSessionByJoinCode = async (req, res) => {
@@ -161,6 +202,73 @@ exports.getSessionSections = async (req, res) => {
   }
 };
 
+//Logic to replace all sections and tags for a given session id
+//PUT /sessions/:id/sections
+exports.updateSessionSections = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sections } = req.body;
+
+    if (!Array.isArray(sections)) {
+      return res.status(400).json({ error: 'Missing or invalid sections in request body' });
+    }
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const result = await db.transaction(async (trx) => {
+      await SessionSection.deleteBySessionId(id, trx);
+
+      const createdSections = [];
+
+      for (const section of sections) {
+        if (!section || !section.session_segtor || !section.section_name) {
+          continue;
+        }
+
+        const section_id = await SessionSection.create({
+          session_id: id,
+          session_segtor: section.session_segtor,
+          section_name: section.section_name,
+        }, trx);
+
+        const createdTags = [];
+        if (Array.isArray(section.tags)) {
+          for (const tag of section.tags) {
+            const tagName = typeof tag === 'string' ? tag : tag?.tag_name;
+            if (!tagName) {
+              continue;
+            }
+
+            const tag_id = await SectionTag.create({
+              section_id,
+              tag_name: tagName,
+            }, trx);
+
+            createdTags.push({ tag_id, tag_name: tagName });
+          }
+        }
+
+        createdSections.push({
+          section_id,
+          session_segtor: section.session_segtor,
+          section_name: section.section_name,
+          tags: createdTags,
+        });
+      }
+
+      return { sections: createdSections };
+    });
+
+    return res.json({ message: 'Session sections updated successfully', ...result });
+  } catch (err) {
+    console.error('Error updating session sections:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
 //Updates a sessions observers array using the sessions id and the user id to add
 //PUT /sessions/:id/observers
 exports.addObserverToSession = async (req, res) => {
@@ -204,4 +312,27 @@ exports.addObserverToSession = async (req, res) => {
         console.error('Error updating session observers:', err);
         return res.status(500).json({ error: 'Server error' });
     }
+};
+
+//Logic to delete a session and all related section/tag rows
+//DELETE /sessions/:id
+exports.deleteSessionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const deletedRows = await Session.deleteBySessionId(id);
+    if (deletedRows != 1) {
+      return res.status(500).json({ error: 'Failed to delete session' });
+    }
+
+    return res.json({ message: 'Session deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting session:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
 };
