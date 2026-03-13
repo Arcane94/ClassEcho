@@ -1,14 +1,15 @@
 import { API_BASE_URL } from "../config";
 
-  //Calls the server and sends all the data needed to log in to the user's accouunt
-  export async function loginToBackend(username: string, password: string): Promise<{success: boolean; error?: string; result?: any}> {
+  //Calls the server and sends all the data needed to log in to the user's account with username or email
+  export async function loginToBackend(identifier: string, password: string): Promise<{success: boolean; error?: string; result?: any}> {
     try {
+      const normalizedIdentifier = identifier.trim();
       const response = await fetch(`${API_BASE_URL}/user/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: normalizedIdentifier, email: normalizedIdentifier, password }),
       });
   
       if (!response.ok) {

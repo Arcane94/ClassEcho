@@ -1,9 +1,9 @@
 import { API_BASE_URL } from "../config";
 
-// Calls backend route to get a user's id by username
-export async function getUserIDFromUsername(username: string): Promise<{ success: boolean; user_id?: number; error?: string }> {
+// Calls backend route to get a user's id by username or email
+export async function getUserIDFromUsername(identifier: string): Promise<{ success: boolean; user_id?: number; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/user/username/${encodeURIComponent(username)}`, {
+    const response = await fetch(`${API_BASE_URL}/user/username/${encodeURIComponent(identifier)}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -24,7 +24,7 @@ export async function getUserIDFromUsername(username: string): Promise<{ success
       user_id: result.user_id,
     };
   } catch (err) {
-    console.error("Error retrieving user id by username:", err);
+    console.error("Error retrieving user id by username/email:", err);
     return {
       success: false,
       error: "Network error",

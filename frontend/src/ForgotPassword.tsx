@@ -5,23 +5,29 @@ import { ArrowLeft } from "lucide-react";
 
 //File Imports
 import LargeTextForm from "./components/LargeTextForm";
-import { getUserIDFromUsername } from "./utils/getUserIDFromUsername";
+import { requestPasswordResetCode } from "./utils/requestPasswordResetCode";
 
 export default function ForgotPasswordScreen() {
     //State to hold username/email input
     const [usernameOrEmail, setUsernameOrEmail] = useState("");
+    const [errorMsg, setErrorMsg] = useState("");
 
     //Set up navigator
     const navigate = useNavigate();
 
     //Use util to retrieve the user id associated with the provided login, then proceed into password reset
     const handleContinue = async () => {
-        const result = await getUserIDFromUsername(usernameOrEmail);
+        if (!usernameOrEmail.trim()) {
+            setErrorMsg("Please enter your username or email.");
+            return;
+        }
+
+        const result = await requestPasswordResetCode(usernameOrEmail.trim());
         if (result.success) {
-            console.log(`[${new Date().toISOString()}] Retrieved user ID for username/email: ${usernameOrEmail}`);
-            navigate("/reset-password", { state: { user_id: result.user_id } });
+            setErrorMsg("");
+            navigate("/reset-password", { state: { identifier: usernameOrEmail.trim() } });
         } else {
-            alert("Failed to find user. Please try again.");
+            setErrorMsg(result.error || "Failed to send reset code. Please try again.");
         }
     };
 
@@ -39,6 +45,8 @@ export default function ForgotPasswordScreen() {
                     onChange={(e) => setUsernameOrEmail(e.target.value)}
                     className="mb-4 placeholder:text-[18px] lg:placeholder:text-base"
                 />
+
+                {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
 
                 <button onClick={handleContinue} className="mt-6 w-full bg-[var(--green-accent)] text-white text-lg py-3 px-4 rounded-sm cursor-pointer">Continue</button>
             </div>

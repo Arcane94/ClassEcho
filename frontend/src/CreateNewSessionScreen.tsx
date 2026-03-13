@@ -27,8 +27,8 @@ export default function CreateNewSessionScreen() {
     };
 
     return (
-        <div className="w-full min-h-screen flex items-center justify-center bg-[var(--accent-color)] py-10">
-            <div className="relative w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg my-6">
+        <div className="w-full h-screen flex items-center justify-center bg-[var(--accent-color)] overflow-hidden py-4">
+            <div className="relative w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg max-h-[calc(100vh-2rem)] overflow-y-auto">
                 <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate(-1)} />
                 <h1 className="mt-4 text-2xl lg:text-3xl mb-1 text-center">Create a New Session</h1>
                 <p className="text-md lg:text-lg mb-8 text-center text-[var(--grey-accent-medium)]">Enter your session details below.</p>

@@ -21,6 +21,32 @@ export default function JoinExistingSessionScreen() {
     //Set up navigator
     const navigate = useNavigate();
 
+    //Helper function to clear session-scoped custom username and navigate back to session options
+    const handleBackToSessionOptions = () => {
+        localStorage.removeItem('custom_username');
+        navigate('/session-options');
+    };
+
+    //Helper function to cancel found-session preview and clear custom username override
+    const handleCancelFoundSession = () => {
+        localStorage.removeItem('custom_username');
+        setSessionFound(false);
+    };
+
+    //Helper function to save the final observer name used for this session, then navigate to observation
+    const handleJoinSession = () => {
+        const normalizedName = name.trim();
+        const normalizedUsername = (localStorage.getItem('username') || '').trim();
+
+        if (normalizedName && normalizedName !== normalizedUsername) {
+            localStorage.setItem('custom_username', normalizedName);
+        } else {
+            localStorage.removeItem('custom_username');
+        }
+
+        navigate('/observation-session');
+    };
+
     // Function to handle session search submission
     const handleSearchSession = async () => {
         try {
@@ -32,6 +58,10 @@ export default function JoinExistingSessionScreen() {
                 setSessionFound(true);
                 //Store sessionInfo session object in localStorage for use later
                 localStorage.setItem("session_info", JSON.stringify(sessionInfo.session));
+                //Also store custom username in localStorage for use in observation session if it's different from the default username
+                if (name.trim() !== localStorage.getItem('username')?.trim()) {
+                    localStorage.setItem('custom_username', name.trim());
+                }
                 console.log("Saved session_info to localStorage:", sessionInfo.session);
             } else {
                 setErrorMsg(sessionInfo.error || "Failed to find session");
@@ -45,7 +75,7 @@ export default function JoinExistingSessionScreen() {
     return (
         <div className="w-full h-screen flex items-center justify-center bg-[var(--accent-color)]">
             <div className="relative w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg">
-                <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate(-1)} />
+                <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={handleBackToSessionOptions} />
                 <h1 className="mt-4 text-2xl lg:text-3xl mb-1 text-center">Join Existing Session</h1>
 
                 {sessionFound ? (
@@ -77,11 +107,11 @@ export default function JoinExistingSessionScreen() {
                         </div>
 
                         {/* Join button */}
-                        <button className="rounded-sm bg-[var(--green-accent)] text-black py-2 px-4 w-full mt-3 cursor-pointer" onClick={() => navigate('/observation-session')}>Join Session as {name}</button>
+                        <button className="rounded-sm bg-[var(--green-accent)] text-black py-2 px-4 w-full mt-3 cursor-pointer" onClick={handleJoinSession}>Join Session as {name}</button>
 
                         {/* Cancel Button */}
                         <div className="flex justify-end mt-3">
-                            <button onClick={() => setSessionFound(false)} className="rounded-sm bg-[var(--grey-accent-medium)] text-white py-2 px-4 cursor-pointer">Cancel</button>
+                            <button onClick={handleCancelFoundSession} className="rounded-sm bg-[var(--grey-accent-medium)] text-white py-2 px-4 cursor-pointer">Cancel</button>
                         </div>
                     </>
                 ) : (

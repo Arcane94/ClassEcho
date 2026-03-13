@@ -10,6 +10,7 @@ exports.create = async function(info) {
   const row = {
     hashed_password: info.hashed_password,
     username: info.username ?? null,
+    email: info.email ?? null,
     sessions: info.sessions ? JSON.stringify(info.sessions) : null,
     edit_sessions: info.edit_sessions ? JSON.stringify(info.edit_sessions) : null,
   };    
@@ -62,6 +63,18 @@ exports.deleteByUserId = async function (user_id) {
 exports.getByUsername = async function (username) {
   const row = await db(TABLE)
     .where({ username })
+    .first();
+  if (row) {
+    row.sessions = row.sessions ?? "[]";
+    row.edit_sessions = row.edit_sessions ?? "[]";
+  }
+  return row || null;
+};
+
+// Retrieves user information using email
+exports.getByEmail = async function (email) {
+  const row = await db(TABLE)
+    .where({ email })
     .first();
   if (row) {
     row.sessions = row.sessions ?? "[]";

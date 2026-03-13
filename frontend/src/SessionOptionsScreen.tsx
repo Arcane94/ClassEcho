@@ -10,7 +10,7 @@ export default function SessionOptionsScreen() {
     return (
         <div className="w-full h-screen flex items-center justify-center bg-[var(--accent-color)]">
             <div className="relative w-4/5 max-w-lg py-12 px-5 lg:px-12 bg-white shadow-lg">
-                <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate(-1)} />
+                <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate('/')} />
                 <h1 className="mt-4 text-2xl lg:text-3xl mb-1 text-center">Welcome to ClassEcho!</h1>
                 <p className="text-md lg:text-lg mb-8 text-center text-[var(--grey-accent-medium)]">How would you like to proceed</p>
 

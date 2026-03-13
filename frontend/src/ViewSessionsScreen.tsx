@@ -46,7 +46,7 @@ export default function ViewSessionsScreen() {
     return (
         <div className="w-full h-screen flex items-center justify-center bg-[var(--accent-color)]">
             <div className="relative w-4/5 max-w-2xl h-[80vh] py-8 px-5 lg:px-8 bg-white shadow-lg flex flex-col">
-                <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate(-1)} />
+                <ArrowLeft className="absolute top-4 left-4 w-6 h-6 cursor-pointer" onClick={() => navigate('/session-options')} />
                 
                 <h1 className="mt-8 text-2xl lg:text-3xl mb-6 text-center font-semibold">Previous Sessions</h1>
 

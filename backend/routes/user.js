@@ -29,6 +29,15 @@ router.get('/:id/sessions/edit', userController.getUserEditSessions);
 //GET route to retrieve a user id by username
 router.get('/username/:username', userController.getUserIdByUsername);
 
+//POST route to request password reset code via email
+router.post('/password-reset/request', userController.requestPasswordResetCode);
+
+//POST route to verify password reset code
+router.post('/password-reset/verify', userController.verifyPasswordResetCode);
+
+//PUT route to confirm password reset with code
+router.put('/password-reset/confirm', userController.confirmPasswordReset);
+
 //PUT route to update a user's password
 router.put('/:id/password', userController.updateUserPassword);
 

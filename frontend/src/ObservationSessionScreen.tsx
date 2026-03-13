@@ -44,6 +44,15 @@ export default function ObservationSessionScreen() {
     //Navigator
     const navigator = useNavigate();
 
+    //Helper function to leave observation and clear session-scoped observer override
+    const handleExitObservation = () => {
+        localStorage.removeItem('custom_username');
+        navigator('/session-options');
+    };
+
+    //Page-load timestamp used for Joined label
+    const [joinedAt] = useState<string>(() => new Date().toISOString());
+
     //Flag to store if the joined session's observer array has been updated with this user's id and if the user's sessions array has been updated with this session's id
     const [sessionJoinLogged, setSessionJoinLogged] = useState(false);
 
@@ -579,9 +588,9 @@ export default function ObservationSessionScreen() {
             {/* Offline indicator that is loaded when user is offline */}
             <OfflineIndicator/>
             <header className="fixed top-0 left-0 right-0 w-full max-w-[800px] mx-auto h-[51px] bg-[var(--grey-accent)] grid grid-cols-12 items-center">
-                <ArrowLeft className="ml-3 col-span-1 w-[24px] h-[24px]" style={{cursor: 'pointer' }} onClick={() => navigator(-1)}  />
-                <p className="text-center col-span-4 text-base">{`Observer: ${sessionInfo?.observer_name}`}</p>
-                <p className="col-span-7 text-center text-base">{`Start: ${sessionInfo?.local_time ? formatToMonthDayHourMinute(sessionInfo.local_time) : 'No time available'}`}</p>
+                <ArrowLeft className="ml-3 col-span-1 w-[24px] h-[24px]" style={{cursor: 'pointer' }} onClick={handleExitObservation}  />
+                <p className="text-center col-span-4 text-base">{`Observer: ${localStorage.getItem('custom_username') || localStorage.getItem('username') || 'Unknown User'}`}</p>
+                <p className="col-span-7 text-center text-base">{`Joined: ${formatToMonthDayHourMinute(joinedAt)}`}</p>
             </header>
 
             <div className="w-full flex justify-center items-start min-h-[calc(100vh-51px)] overflow-hidden">

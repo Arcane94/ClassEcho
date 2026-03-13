@@ -1,14 +1,14 @@
 import { API_BASE_URL } from "../config";
 
-// Calls backend route to reset a user's password by user id
-export async function resetUserPassword(userId: number | string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+// Calls backend route to reset a user's password using identifier and reset code
+export async function resetUserPassword(identifier: string, resetCode: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/user/${String(userId)}/password`, {
+    const response = await fetch(`${API_BASE_URL}/user/password-reset/confirm`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ new_password: newPassword }),
+      body: JSON.stringify({ identifier, reset_code: resetCode, new_password: newPassword }),
     });
 
     if (!response.ok) {
