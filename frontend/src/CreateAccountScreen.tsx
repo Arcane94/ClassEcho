@@ -1,6 +1,6 @@
 //Package Imports
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 //File Imports
 import { createAccountOnBackend } from "./utils/createAccountOnBackend";
@@ -44,7 +44,9 @@ export default function CreateAccountScreen() {
                 {errorMsg && <p className="text-red-500 mb-4">{errorMsg}</p>}
 
                 <button onClick={handleCreateAccount} className="mt-6 w-full bg-[var(--green-accent)] text-white text-lg py-3 px-4 rounded-sm cursor-pointer">Sign Up</button>
-                <p className="text-md text-center text-[var(--grey-accent-medium)] mt-6 mb-6">Already have an account? <a href="/" className="text-[var(--accent-color)]">Log in!</a></p>
+                <p className="text-md text-center text-[var(--grey-accent-medium)] mt-6 mb-6">
+                    Already have an account? <Link to="/" className="text-[var(--accent-color)]">Log in!</Link>
+                </p>
             </div>
         </div>
     );
