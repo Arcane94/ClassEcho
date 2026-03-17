@@ -14,8 +14,8 @@ export default function CustomizeSessionScreen() {
     //List of Student Tags for Student Observation
     const consStudentBehaviorTags = ["Coding", "Collaborating", "Logging In", "Planning", "Reading Code", "Reading Instructions", "Talking w/ teacher", "Waiting for help", "Debugging", "On Unrelated Tab", "Requesting Help", "Running Code", "Talking w/ peer"];
     const consTeacherBehaviorTags = ["Open-ended questions", "Direct to tasks", "Directs to resources", "Models struggle", "Teaches CT concept", "Manages behavior", "Stretch goals", "Reminds to save code", "Encourages collaboration", "Encourages participation", "Organizes peer tutors", "Organizes paired programming", "Encourages help-seeking", "Teaches collaboration", "Normalizes mistakes", "Connects to student interest"];
-    let consFunctionTags = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
-    let consStructureTags = ["Activity", "Help-seeking queue", "LMS", "Rules and Norms", "Snap!"];
+    const consFunctionTags = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
+    const consStructureTags = ["Activity", "Help-seeking queue", "LMS", "Rules and Norms", "Snap!"];
 
     //Navigator
     const navigate = useNavigate();
@@ -128,8 +128,10 @@ export default function CustomizeSessionScreen() {
             console.log('Created session id:', session_id);
 
             //Update user's sessions and edit_sessions arrays in the backend
-            await updateUserSessions(userId, session_id);
-            await updateUserEditSessions(userId, session_id);
+            if (userId !== undefined) {
+                await updateUserSessions(userId, session_id);
+                await updateUserEditSessions(userId, session_id);
+            }
 
             navigate('/session-options');
         } catch (error) {

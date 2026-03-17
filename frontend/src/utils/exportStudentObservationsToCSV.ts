@@ -29,13 +29,13 @@ export async function exportStudentObservationsToCSV(sessionId: string | number)
     //Convert observations to CSV rows
     const rows = observations.map((obs: StudentObservationData) => {
       // Helper function to safely convert to array and join
-      const safeJoin = (value: any): string => {
+      const safeJoin = (value: unknown): string => {
         if (Array.isArray(value)) {
           return value.join(";");
         } else if (typeof value === 'object' && value !== null) {
           // If it's an object, extract all values that are arrays and flatten them
           const allValues: string[] = [];
-          Object.values(value).forEach((v: any) => {
+          Object.values(value as Record<string, unknown>).forEach((v: unknown) => {
             if (Array.isArray(v)) {
               allValues.push(...v);
             }
