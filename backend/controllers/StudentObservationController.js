@@ -11,9 +11,8 @@ exports.createStudentObservation = async (req, res) => {
         note,
         session_id,
         student_id,
-        behavior_tags,
+        selected_tags,
         affect,
-        custom_tags,
         submitted_by_user,
         single_click,
         recording,
@@ -24,7 +23,7 @@ exports.createStudentObservation = async (req, res) => {
       console.log(req.body);
   
       // Basic validation
-      if ( !single_click && (!session_id || !Array.isArray(behavior_tags) || !Array.isArray(affect) || !Array.isArray(custom_tags))) {
+      if ( !single_click && (!session_id || !Array.isArray(affect))) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
@@ -35,9 +34,8 @@ exports.createStudentObservation = async (req, res) => {
         start_time: new Date(),
         session_id,
         student_id,
-        behavior_tags,
+        selected_tags,
         affect,
-        custom_tags,
         submitted_by_user: submitted_by_user ?? false, // default false if undefined
         recording: recording == null ? null : !!recording,
         on_task,
@@ -59,3 +57,66 @@ exports.createStudentObservation = async (req, res) => {
       return res.status(500).json({ error: 'Unexpected Student Observation Creation Error' });
     }
   };
+
+  //Logic to find and remove an observation from the logs given the observations id
+  exports.deleteStudentObservation = async (req, res) => {
+    try {
+      //Pull ids from request body
+       ids = req.body.ids;
+
+       //Ensure that an ids were given and that the length of array is greater than 0
+       if (!ids || ids.length === 0) {
+        return res.status(400).json({error: "No id given."})
+       }
+
+       //Convert ids to numbers
+       ids = ids.map(item => typeof item === "object" ? item.id : item);
+
+       console.log(`Deleting observations with ids: ${ids}`)
+       //Delete all rows
+       const rowsDeleted = await studentObservationModel.deleteMultiple(ids);
+
+       //Return number of deletes performed
+       return res.status(200).json({data: rowsDeleted});
+    } catch (error) {
+      console.error("Unexpected Error Occurred while deleting logs", error);
+      return res.status(500).json({error: "Unexpected Server Error"});
+    }
+  }
+
+  //Logic to return all observations for a given session id
+  exports.getObservationsBySessionId = async (req, res) => {
+    try {
+      const { session_id } = req.params;
+      const observations = await studentObservationModel.getBySessionId(session_id);
+      
+      // Normalize JSON fields from database
+      const normalizedObservations = observations.map(obs => ({
+        ...obs,
+        behavior_tags: obs.selected_tags ? (typeof obs.selected_tags === 'string' ? JSON.parse(obs.selected_tags) : obs.selected_tags) : [],
+        affect: obs.affect ? (typeof obs.affect === 'string' ? JSON.parse(obs.affect) : obs.affect) : [],
+        custom_tags: []
+      }));
+      
+      return res.json(normalizedObservations);
+    } catch (err) {
+      console.error('Error fetching observations:', err);
+      return res.status(500).json({ error: 'Server error' });
+    }
+  };
+
+//Logic to return a single observation given the observations id  
+exports.getObservationById = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const observation = await studentObservationModel.getById(id);
+      if (!observation) {
+        return res.status(404).json({ error: 'Observation not found' });
+      } else {
+        return res.json(observation);
+      } 
+    } catch (err) {
+      console.error('Error fetching observation:', err);
+      return res.status(500).json({ error: 'Server error' });
+    }
+};

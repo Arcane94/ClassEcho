@@ -2,6 +2,7 @@
 const sessionRoutes = require('./routes/sessions.js');
 const teacherRoutes = require('./routes/teacherObservations.js');
 const studentRoutes = require('./routes/studentObservations.js');
+const userRoutes = require('./routes/user.js');
 
 //Import config
 const config = require('./config');
@@ -15,6 +16,9 @@ const app = express();
 app.use(express.json());
 //Connection help
 app.use(cors());
+
+// Mount user routes under the '/user' url
+app.use('/user', userRoutes);
 
 //Mount session routes under the '/sessions' url
 app.use('/sessions', sessionRoutes);

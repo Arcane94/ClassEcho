@@ -4,6 +4,7 @@ import SmallTextForm from "./components/SmallTextForm";
 import studentSendFormSvg from "./assets/images/student_send_form.svg";
 import teacherSendFormSvg from "./assets/images/teacher_send_form.svg";
 import invalidSendFormSvg from "./assets/images/invalid_send_form.svg";
+import deleteRecordingSvg from "./assets/images/delete_recording.svg";
 import startRecordPng from "./assets/images/start_recording.png";
 import stopRecordSvg from "./assets/images/stop_recording.svg";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,8 @@ import { fetchSessionById } from "./utils/fetchSessionById";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
 import { createTeacherObservation } from "./utils/createTeacherObservation";
 import { createStudentObservation } from "./utils/createStudentObservation";
+import { deleteStudentObservations } from "./utils/deleteStudentObservations";
+import { deleteTeacherObservations } from "./utils/deleteTeacherObservations";
 import type { SessionData } from './utils/fetchSessionById';
 import OfflineIndicator from "./components/OfflineIndicator";
 
@@ -74,7 +77,7 @@ export default function ObservationScreen() {
     //State to store selected student tag
     const [selectedStudentTags, setSelectedStudentTags] = useState<string[]>([]);
 
-    //State to store selected student affect tag
+    //State to store selected student affect tags
     const [selectedAffectTags, setSelectedAffectTags] = useState<string[]>([]);
 
     //State to store selected behavior tags
@@ -110,17 +113,8 @@ export default function ObservationScreen() {
     //Constant List of Behavior Tag Classifications
     const behaviorTagClassifications = ["By Student", "At Front", "On LMS", "Walking"];
 
-    //List of Behavior - At Front Tags 
-    const behaviorAtFrontTags = ["Open-ended questions", "Direct to tasks", "Directs to resources", "Models struggle", "Teaches CT concept", "Manages behavior", "Stretch goals", "Reminds to save code", "Encourages collaboration", "Encourages participation", "Organizes peer tutors", "Organizes paired programming", "Encourages help-seeking", "Teaches collaboration", "Normalizes mistakes", "Connects to student interest"];
-
-    //List of Behavior - On LMS Tags
-    const behaviorOnLMSTags = ["Directs to tasks", "Directs to resources", "Monitors progress", "Models struggle", "Models action in IDE", "Organizes peer tutors", "Organizes paired programming", "Technical support"];
-
-    //List of Behavior - Walking Tags
-    const behaviorWalkingTags = ["Open-ended questions", "Directs to resources", "Encourages collaboration", "Encourages participation", "Manages behavior", "Monitors progress", "Organizes peer tutors", "Organizes paired programming", "Stretch goals", "Reminds to save code", "Normalizes mistakes"];
-
-    //List of Behavior - By Student Tags
-    const behaviorByStudentTags = ["Directs to resources", "Directs to peer help", "Direct to tasks", "Manages behavior", "Mistakes are normal", "Open-ended questions", "Prompts for Debugging", "Stretch goals", "Teaches CT concept", "Technical support"];
+    //List of preset behavior tags
+    const teacherBehaviorTags = ["Open-ended questions", "Direct to tasks", "Directs to resources", "Models struggle", "Teaches CT concept", "Manages behavior", "Stretch goals", "Reminds to save code", "Encourages collaboration", "Encourages participation", "Organizes peer tutors", "Organizes paired programming", "Encourages help-seeking", "Teaches collaboration", "Normalizes mistakes", "Connects to student interest"];
 
     //List of Function Tags
     let functionTags = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
@@ -136,6 +130,13 @@ export default function ObservationScreen() {
 
     //Tick counter that allows observation time to have a new key when updated
     const [observationTick, setObservationTick] = useState(0);
+
+    //An array of single-click student observation ids that are saved when a user is recording, exists so these can be removed from database if record is cancelled
+    const [recordingStudentIdBackup, setRecordingStudentIdBackup] = useState<number[]>([]);
+
+    //An array of single-click teacher observation ids that are saved when a user is recording, exists so these can be removed from database if record is cancelled
+    const [recordingTeacherIdBackup, setRecordingTeacherIdBackup] = useState<number[]>([]);
+
 
     //UseEffect statement to be triggered on component load that uses sessionId to pull additional session info from server
     useEffect(() => {
@@ -227,6 +228,31 @@ export default function ObservationScreen() {
         }
     }
 
+    //Helper function to handle when a teacher behavior tag is clicked
+    const handleTeacherBehaviorTagClick = (tag: string) => {
+        setSelectedBehaviorTags((prevTags: string[]) => {
+            const updated = toggleStringInArray(prevTags, tag);
+    
+            // submit observation if tag is being added
+            if (!prevTags.includes(tag)) {
+                console.log(`[${new Date().toISOString()}] Added ${tag} tag to selected behavior tags.\nBehavior tags is now: ${updated}`)
+                handleTeacherObservationSingleSubmit("behavior_tags", tag);
+            } else {
+                console.log(`[${new Date().toISOString()}] Removed ${tag} tag from selected behavior tags.\nBehavior tags is now: ${updated}`)
+
+            }
+    
+            return updated;
+        });
+    };
+
+    //Helper function to handle a teacher position tag click with some added logging
+    const handleTeacherPositionTagClick = (tag: string) => {
+        setBehaviorClass(tag);
+        console.log(`[${new Date().toISOString()}] Setting teacher position to ${tag}`);
+    };
+    
+
     //Helper function to add a new entry in the customTags map
     const addCustomTag = (key: string, value: string) => {
         setCustomTags(prevTags => {
@@ -237,19 +263,7 @@ export default function ObservationScreen() {
         });
     }
 
-    //Helper function to determine and return the constant list of behavior tags corresponding to the current behavior tab selected
-    const getBehaviorTags = () => {
-        if (behaviorClass === "By Student") {
-            return behaviorByStudentTags;
-        } else if (behaviorClass === "At front") {
-            return behaviorAtFrontTags;
-        } else if (behaviorClass === "On LMS") {
-            return behaviorOnLMSTags
-        } else {
-            return behaviorWalkingTags;
-        }
-    }
-
+    //Helper function
     //Helper function to send teacher observation info to server when the form is officially submitted
     const handleTeacherObservationSubmit = async (recording?: boolean) => {
         //Built data to send to util function
@@ -257,6 +271,7 @@ export default function ObservationScreen() {
             session_id: Number(sessionId),
             //Ensure difference between teacher and student form ids
             student_id: teacherObsStudentId,
+            teacher_position: behaviorClass,
             behavior_tags: selectedBehaviorTags,
             function_tags: selectedFunctionTags,
             structure_tags: selectedStructureTags,
@@ -305,7 +320,11 @@ export default function ObservationScreen() {
         };
         try {
             //Call util function with formatted data
-            await createTeacherObservation(teacherObsData);
+            const response = await createTeacherObservation(teacherObsData);
+            if (isRecordingTeacherObs) {
+                //if the user is recording, save the id from this log to the recording backup
+                setRecordingTeacherIdBackup(prev => [...prev, response]);
+            }
         } catch (error) {
             console.error('Failed to submit teacher observation', error);
             console.log('Adding Teacher Single Submit Observation to waiting logs.')
@@ -364,10 +383,15 @@ export default function ObservationScreen() {
             submitted_by_user: false,
             single_click: true,
             recording: null,
+            on_task: isStudentOnTask,
         };
         try {
             //Call util function with formatted data
-            await createStudentObservation(studentObsData);
+            const response = await createStudentObservation(studentObsData);
+            if (isRecordingStudentObs) {
+                //if the user is recording, save the id from this log to the recording backup
+                setRecordingStudentIdBackup(prev => [...prev, response]);
+            }
         } catch (error) {
             console.error('Failed to submit student observation', error);
             console.log('Adding Teacher Single Submit Observation to waiting logs.')
@@ -423,6 +447,57 @@ export default function ObservationScreen() {
         }
     }
 
+    //Helper function to handle when a recording is cancelled while in progress
+    const handleCancelRecording = async () => {
+        //Clear the user's selections
+        clearUserSelections();
+        //Delete correct tags
+        if (isRecordingStudentObs) {
+            await deleteStudentObservations(recordingStudentIdBackup);
+            //Clear the backup
+            setRecordingStudentIdBackup([]);
+            //Build a minimal objext to send as an observation to represent recording stop
+            const studentObsData: any = {
+                session_id: Number(sessionId),
+                //Ensure difference between teacher and student form ids
+                submitted_by_user: false,
+                single_click: true,
+                recording: false,
+            };
+            try {
+                //Call util function with formatted data
+                await createStudentObservation(studentObsData);
+            } catch (error) {
+                console.error('Failed to submit student observation', error);
+                console.log('Adding Student Single Submit Observation to waiting logs.')
+                storeObservationLocally(studentObsData);
+            }
+        } else {
+            await deleteTeacherObservations(recordingTeacherIdBackup);
+            //Clear the backup
+            setRecordingTeacherIdBackup([]);
+            //Build a minimal objext to send as an observation to represent recording stop
+            const teacherObsData: any = {
+                session_id: Number(sessionId),
+                //Ensure difference between teacher and student form ids
+                submitted_by_user: false,
+                single_click: true,
+                recording: false,
+            };
+            try {
+                //Call util function with formatted data
+                await createTeacherObservation(teacherObsData);
+            } catch (error) {
+                console.error('Failed to submit teacher observation', error);
+                console.log('Adding Teacher Single Submit Observation to waiting logs.')
+                storeObservationLocally(teacherObsData);
+            }
+        }
+        //Set the proper isRecording tag to false
+        setIsRecordingStudentObs(false);
+        setIsRecordingTeacherObs(false);
+    }
+
     return (
         <>
             {/* Offline indicator that is loaded when user is offline */}
@@ -444,30 +519,37 @@ export default function ObservationScreen() {
                     {observingTeacher ? 
                         (
                         <>
-                        <h1 className="text-xl ml-[24px] mt-4">{`Behavior (What?)`}</h1>
-
+                        <h1 className="text-xl ml-[24px] mt-4">{`Teacher Position`}</h1>
                         {/* Behavior Tag Options */}
-                        <div className="ml-[24px] mr-[24px] mt-3 w-full flex gap-2 flex-wrap items-start">
+                        <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
                             {behaviorTagClassifications.map((tag, index) => (
-                                <button key={index} style={{cursor: 'pointer'}} onClick={() => setBehaviorClass(tag)} className={`text-l px-2 py-2 rounded-xl [@media(max-width:375px)]:text-xs [@media(max-width:450px)]:text-sm ${behaviorClass === tag ? 'bg-[var(--light-blue-accent)]' : 'bg-[var(--grey-accent)]'}`}>{tag}</button>
+                                <button key={index} style={{cursor: 'pointer'}} onClick={() => handleTeacherPositionTagClick(tag)} className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${behaviorClass === tag ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
                             ))}
-                            
                         </div>
 
+                        {/*Student ID Button */}
+                        <div className="flex mt-4 ml-[24px] items-center">
+                            <label htmlFor="studentID" className="text-sm">Student ID </label>
+                            <input id="studentID" style={{cursor: 'text'}} type="text" value={teacherObsStudentId} onChange={(e) => setTeacherObsStudentId(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/4"/>
+                        </div>
+
+                        <h2 className="text-xl ml-[24px] mt-4">{`Behavior (What?)`}</h2>
+
+
                         {/* Behavior Tag Display */}
-                        <div className="relative -top-[8px]">
-                            <div className="py-3 px-[24px] w-full bg-[var(--light-blue-accent)]">
+                        <div className="mt-2">
+                            <div className="py-3 px-[24px] w-full">
                                 <div className="flex gap-2 flex-wrap items-center">
-                                    {getBehaviorTags().map((tag, index) => (
-                                        <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => { setSelectedBehaviorTags((prevTags: string[]) => toggleStringInArray(prevTags, `${tag} - ${behaviorClass}`)); !selectedBehaviorTags.includes(`${tag} - ${behaviorClass}`) ? handleTeacherObservationSingleSubmit('behavior_tags', `${tag} - ${behaviorClass}`) : null; }} className={`text-sm px-2 py-2 rounded-xl ${selectedBehaviorTags.includes(`${tag} - ${behaviorClass}`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
+                                    {teacherBehaviorTags.map((tag, index) => (
+                                        <button key={`built-in-${index}`} style={{cursor: 'pointer'}} onClick={() => handleTeacherBehaviorTagClick(tag)} className={`text-sm px-2 py-2 rounded-xl border border-gray-300 ${selectedBehaviorTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white'}`}>{tag}</button>
                                     ))}
                                     {/* Custom Behavior Tags */}
-                                    {(customTags.get(`behavior_tags - ${behaviorClass}`) || []).map((tag, index) => (
+                                    {(customTags.get(`behavior_tags`) || []).map((tag, index) => (
                                         <button
                                         key={`custom-${index}`}
-                                        onClick={() => toggleTeacherCustomTag(`${tag} - Behavior (${behaviorClass})`)}
+                                        onClick={() => toggleTeacherCustomTag(tag)}
                                         style={{cursor: 'pointer'}}
-                                        className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(`${tag} - Behavior (${behaviorClass})`) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
+                                        className={`text-sm border border-gray-300 py-2 px-2 rounded-xl ${selectedTeacherCustomTags.includes(tag) ? 'bg-[var(--accent-color)] text-white' : 'bg-white' }`}
                                         >
                                         {tag}
                                         </button>
@@ -475,19 +557,14 @@ export default function ObservationScreen() {
                                     <button onClick={() => setAddTagModalString('behavior')} style={{cursor: 'pointer'}} className='text-sm w-6 h-6 rounded-full bg-white flex justify-center items-center border border-gray-300'>+</button>
                                     {/* Show Modal only if timeModalOpen is true */}
                                     { AddTagModalString == 'behavior' && (
-                                        <AddTagModal modalHeader={"Add Behavior Tag"} tagSection={`behavior_tags - ${behaviorClass}`} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
+                                        <AddTagModal modalHeader={"Add Behavior Tag"} tagSection={`behavior_tags`} onAddTag={addCustomTag} onClose={() => setAddTagModalString('')}/>
                                     )}
                                     
-                                </div>
-                                {/*Student ID Button */}
-                                <div className="flex mt-4 items-center">
-                                    <label htmlFor="studentID" className="text-sm">Student ID </label>
-                                    <input id="studentID" style={{cursor: 'text'}} type="text" value={teacherObsStudentId} onChange={(e) => setTeacherObsStudentId(e.target.value)} placeholder="" className="ml-2 bg-white border border-gray-300 rounded px-1 py-0 focus:outline-none w-1/4"/>
                                 </div>
                             </div>
                         </div>
 
-                        <h2 className="text-xl ml-[24px] mt-4">{`Function (Why?)`}</h2>
+                        <h3 className="text-xl ml-[24px] mt-4">{`Function (Why?)`}</h3>
                         
                         {/*Function Tag Options */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
@@ -512,7 +589,7 @@ export default function ObservationScreen() {
                             )}
                         </div>
 
-                        <h3 className="text-xl ml-[24px] mt-4">{`Structure (With what?)`}</h3>
+                        <h4 className="text-xl ml-[24px] mt-4">{`Structure (With what?)`}</h4>
                         
                         {/*Structure Tag Options */}
                         <div className="py-2 px-[24px] w-full flex gap-2 flex-wrap items-center">
@@ -630,6 +707,7 @@ export default function ObservationScreen() {
                                     </div>
                                 ) :  (
                                     <div className="flex gap-2">
+                                        <img src={deleteRecordingSvg} alt="Delete Record Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={() => handleCancelRecording() }/>
                                         <img src={stopRecordSvg} alt="Stop Recording Button" className="w-[36px] h-[36px]" style={{cursor: 'pointer'}} onClick={handleStopRecordingObservation}/>
                                         <img src={invalidSendFormSvg} alt="Invalid Send Form Button" style={{cursor: 'not-allowed'}} className="w-[36px] h-[36px]"/>
                                     </div>

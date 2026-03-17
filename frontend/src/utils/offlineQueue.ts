@@ -17,7 +17,7 @@ const TEACHER_KEY = "pendingTeacherObservations";
 export function storeObservationLocally(observationData: (StudentObservationData | TeacherObservationData)) {
     try {
         //Determine which type of observation this is, use studentId field since only studentObservations contain this
-        const isStudentObservation = "student_id" in observationData;
+        const isStudentObservation = "on_task" in observationData;
         //Set storage key
         const storageKey = isStudentObservation ? STUDENT_KEY : TEACHER_KEY;
 

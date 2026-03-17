@@ -9,9 +9,7 @@ exports.create = async function (info) {
     student_id: info.student_id ?? null,
     // Start/end capture the recording window 
     start_time: info.start_time ?? null,
-    // Tag arrays can be strings (keys) or numeric IDs; store as JSON strings
-    behavior_tags:  info.behavior_tags  ? JSON.stringify(info.behavior_tags)  : null,
-    custom_tags:  info.custom_tags  ? JSON.stringify(info.custom_tags)  : null,
+    selected_tags:  info.selected_tags  ? JSON.stringify(info.selected_tags)  : null,
     affect:  info.affect  ? JSON.stringify(info.affect)  : null,
     // Single click vs grouped "send"
     submitted_by_user:  !!info.submitted_by_user,
@@ -27,16 +25,24 @@ exports.create = async function (info) {
   return id;
 };
 
+//Logic to delete multiple student observation
+exports.deleteMultiple = async (ids) => {
+  // Use whereIn to delete all rows at once
+  const deletedRows = await db('student_observation')
+    .whereIn('id', ids)
+    .del();
+
+  // returns number of rows deleted
+  return deletedRows; 
+};
+
 exports.update = async function (id, patch) {
   const upd = {}
   if (patch.start_time !== undefined) {
     upd.start_time = patch.start_time;
   }
-  if (patch.behavior_tags !== undefined) {
-    upd.behavior_tags = patch.behavior_tags ? JSON.stringify(patch.behavior_tags) : null;
-  }
-  if (patch.custom_tags !== undefined) {
-    upd.custom_tags = patch.custom_tags ? JSON.stringify(patch.custom_tags) : null;
+  if (patch.selected_tags !== undefined) {
+    upd.selected_tags = patch.selected_tags ? JSON.stringify(patch.selected_tags) : null;
   }
   if (patch.affect !== undefined) {       
     upd.affect = patch.affect ? JSON.stringify(patch.affect) : null;
@@ -60,3 +66,15 @@ exports.update = async function (id, patch) {
   }
   return await db(TABLE).where({id}).update(upd);
 }
+
+//Retrieves all observations for a given session id
+exports.getBySessionId = async function (session_id) {
+  const rows = await db(TABLE).where({session_id});
+  return rows || [];
+};
+
+//Retrieves a single observation by its id
+exports.getById = async function (id) {
+  const row = await db(TABLE).where({id}).first();
+  return row || null;
+};
