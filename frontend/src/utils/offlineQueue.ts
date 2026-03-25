@@ -13,6 +13,17 @@ import { isServerOnline, isUserOnline } from "./networkChecks";
 //Local Storage keys
 const STUDENT_KEY = "pendingStudentObservations";
 const TEACHER_KEY = "pendingTeacherObservations";
+const MAX_FAILED_ATTEMPTS = 3;
+
+type QueuedObservation = (StudentObservationData | TeacherObservationData) & {
+    status?: "pending";
+    failed_attempts?: number;
+};
+
+function removeQueueMetadata(observation: QueuedObservation): StudentObservationData | TeacherObservationData {
+    const { status, failed_attempts, ...payload } = observation;
+    return payload as StudentObservationData | TeacherObservationData;
+}
 
 export function storeObservationLocally(observationData: (StudentObservationData | TeacherObservationData)) {
     try {
@@ -29,6 +40,7 @@ export function storeObservationLocally(observationData: (StudentObservationData
         obsArray.push({
             ...observationData,
             status: "pending",
+            failed_attempts: 0,
         })
 
         //Set localStorage back
@@ -44,31 +56,54 @@ export function storeObservationLocally(observationData: (StudentObservationData
 //Function to help to mass send all observations when connection is re-opened
 async function sendAllObservationsByKey(storageKey: string) {
     //Get observations from local storage
-    const obsArray = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const obsArray: QueuedObservation[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
     if (obsArray.length === 0) return true; //Nothing in logs to send
-    //Make a copy of the obsArray to ensure obsArray is not incorrectly manipulated if any problems occur
-    const pending = [...obsArray];
 
     //Flag to set if a error occurs while sending tags to backend
     let allSent = true;
-    //Loop through the array and send to server while obsArray is not empty
-    for (const observation of pending) {
+    let index = 0;
+
+    //Loop through the array and send observations while there are entries left
+    while (index < obsArray.length) {
+        const observation = obsArray[index];
+        const payload = removeQueueMetadata(observation);
+
         try {
             //Send first observation to server
             if (storageKey === STUDENT_KEY) {
-                await createStudentObservation(observation as StudentObservationData);
+                await createStudentObservation(payload as StudentObservationData);
               } else {
-                await createTeacherObservation(observation as TeacherObservationData);
+                await createTeacherObservation(payload as TeacherObservationData);
               }
 
             //Remove this observation from the obsArray
-            obsArray.shift();
+            obsArray.splice(index, 1);
             //Reset localStorage with shortened array to ensure saved observations remain correct in case of network loss
             localStorage.setItem(storageKey, JSON.stringify(obsArray));
-        } catch {
-            //Break if any errors are thrown by the create function
+
+            //Do not increment index after splice, next item shifts into current index
+        } catch (error) {
+            const failedAttempts = (observation.failed_attempts ?? 0) + 1;
             allSent = false;
-            break;
+
+            if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+                //Remove permanently failing item so remaining observations can still flush
+                obsArray.splice(index, 1);
+                console.warn("Dropping queued observation after repeated failures", {
+                    storageKey,
+                    failedAttempts,
+                    error,
+                });
+            } else {
+                obsArray[index] = {
+                    ...observation,
+                    failed_attempts: failedAttempts,
+                };
+                index += 1;
+            }
+
+            //Persist queue updates after each failed attempt
+            localStorage.setItem(storageKey, JSON.stringify(obsArray));
         }
     }
     return allSent;

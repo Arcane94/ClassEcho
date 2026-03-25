@@ -72,7 +72,7 @@ export default function ObservationScreen() {
      const [extraStudentNote, setExtraStudentNote] = useState("");
 
     //State to store selected behavior tag class
-    const [behaviorClass, setBehaviorClass] = useState('By Student');
+    const [behaviorClass, setBehaviorClass] = useState('');
 
     //State to store selected student tag
     const [selectedStudentTags, setSelectedStudentTags] = useState<string[]>([]);
@@ -191,7 +191,7 @@ export default function ObservationScreen() {
     const clearUserSelections = () => {
         if (observingTeacher) {
             setExtraTeacherNote('');
-            setBehaviorClass('By Student');
+            setBehaviorClass('');
             setSelectedBehaviorTags([]);
             setSelectedFunctionTags([]);
             setSelectedStructureTags([]);
