@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, X } from "lucide-react";
 
-import AddTagModal from "./components/AddTagModal";
-import { getSessionSectionInfo } from "./utils/getSessionSectionInfo";
-import { updateSessionSections } from "./utils/updateSessionSections";
+import AddTagModal from "./components/Modal/AddTagModal";
+import { getSessionSectionInfo } from "./services/getSessionSectionInfo";
+import { updateSessionSections } from "./services/updateSessionSections";
 
 export default function ManageIndividualSessionScreen() {
   const navigate = useNavigate();

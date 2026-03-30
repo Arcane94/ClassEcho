@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import offlineIconSvg from "../assets/images/offline_icon.svg"; // replace with your icon path
+import offlineIconSvg from "../../assets/images/offline_icon.svg"; // replace with your icon path
 
 export default function OfflineIndicator() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);

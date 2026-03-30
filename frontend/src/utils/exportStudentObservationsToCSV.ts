@@ -1,5 +1,5 @@
-import { getAllStudentObservationsForSession } from "./getAllStudentObservationsForSession";
-import type { StudentObservationData } from "./createStudentObservation";
+import { getAllStudentObservationsForSession } from "../services/getAllStudentObservationsForSession";
+import type { StudentObservationData } from "../services/createStudentObservation";
 
 //Exports student observations for a session to a CSV file
 export async function exportStudentObservationsToCSV(sessionId: string | number): Promise<void> {

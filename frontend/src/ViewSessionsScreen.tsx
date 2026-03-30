@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
-import { getAllUserSessions } from "./utils/getAllUserSessions";
-import type { SessionData } from "./utils/fetchSessionById";
+import { getAllUserSessions } from "./services/getAllUserSessions";
+import type { SessionData } from "./services/fetchSessionById";
 
 export default function ViewSessionsScreen() {
     const navigate = useNavigate();

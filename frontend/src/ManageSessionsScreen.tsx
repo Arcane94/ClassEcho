@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronUp, FileText } from "lucide-react";
-import { getAllUserEditSessions } from "./utils/getAllUserEditSessions";
-import type { SessionData } from "./utils/fetchSessionById";
-import { updateSessionInfo } from "./utils/updateSessionInfo";
-import { deleteSession } from "./utils/deleteSession";
+import { getAllUserEditSessions } from "./services/getAllUserEditSessions";
+import type { SessionData } from "./services/fetchSessionById";
+import { updateSessionInfo } from "./services/updateSessionInfo";
+import { deleteSession } from "./services/deleteSession";
 import { exportStudentObservationsToCSV } from "./utils/exportStudentObservationsToCSV";
 import { exportTeacherObservationsToCSV } from "./utils/exportTeacherObservationsToCSV";
 

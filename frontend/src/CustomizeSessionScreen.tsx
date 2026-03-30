@@ -4,10 +4,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, X } from "lucide-react";
 
 //File Imports
-import AddTagModal from "./components/AddTagModal";
-import { createSession } from "./utils/createSession";
-import { updateUserSessions } from "./utils/updateUserSessions";
-import { updateUserEditSessions } from "./utils/updateUserEditSessions";
+import AddTagModal from "./components/Modal/AddTagModal";
+import { createSession } from "./services/createSession";
+import { updateUserSessions } from "./services/updateUserSessions";
+import { updateUserEditSessions } from "./services/updateUserEditSessions";
 
 export default function CustomizeSessionScreen() {
     // Constant Tags for default tags

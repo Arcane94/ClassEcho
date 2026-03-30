@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 //File Imports
-import LargeTextForm from "./components/LargeTextForm";
+import LargeTextForm from "./components/Form/LargeTextForm";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 

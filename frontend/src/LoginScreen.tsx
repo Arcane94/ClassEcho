@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 //File Imports
-import { loginToBackend } from "./utils/loginToBackend";
-import LargeTextForm from "./components/LargeTextForm";
+import { loginToBackend } from "./services/loginToBackend";
+import LargeTextForm from "./components/Form/LargeTextForm";
 
 export default function LoginScreen() {
 

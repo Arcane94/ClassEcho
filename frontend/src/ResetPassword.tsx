@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { resetUserPassword } from "./utils/resetUserPassword";
-import { verifyPasswordResetCode } from "./utils/verifyPasswordResetCode";
+import { resetUserPassword } from "./services/resetUserPassword";
+import { verifyPasswordResetCode } from "./services/verifyPasswordResetCode";
 
 export default function ResetPasswordScreen() {
     //State to hold new password values

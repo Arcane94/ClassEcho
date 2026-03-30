@@ -1,7 +1,7 @@
 //First pull all session info using the join code
 import {ArrowLeft} from "lucide-react";
 import { useState, useEffect } from "react";
-import SmallTextForm from "./components/SmallTextForm";
+import SmallTextForm from "./components/Form/SmallTextForm";
 import studentSendFormSvg from "./assets/images/student_send_form.svg";
 import teacherSendFormSvg from "./assets/images/teacher_send_form.svg";
 import invalidSendFormSvg from "./assets/images/invalid_send_form.svg";
@@ -10,17 +10,17 @@ import startRecordPng from "./assets/images/start_recording.png";
 import stopRecordSvg from "./assets/images/stop_recording.svg";
 import { useNavigate } from "react-router-dom";
 import { getCurrentTimeFormatted } from "./utils/getCurrentTimeFormatted";
-import AddTagModal from "./components/AddTagModal";
-import FadeOutText from "./components/FadeOutText";
+import AddTagModal from "./components/Modal/AddTagModal";
+import FadeOutText from "./components/Display/FadeOutText";
 import { formatToMonthDayHourMinute } from "./utils/formatToMonthDayHourMinute";
-import { createTeacherObservation } from "./utils/createTeacherObservation";
-import { createStudentObservation } from "./utils/createStudentObservation";
-import { deleteStudentObservations } from "./utils/deleteStudentObservations";
-import { deleteTeacherObservations } from "./utils/deleteTeacherObservations";
-import type { SessionSectionInfo } from "./utils/getSessionSectionInfo";
-import type { SessionInfo } from "./utils/getSessionByJoinCode";
-import OfflineIndicator from "./components/OfflineIndicator";
-import { getSessionSectionInfo } from "./utils/getSessionSectionInfo";
+import { createTeacherObservation } from "./services/createTeacherObservation";
+import { createStudentObservation } from "./services/createStudentObservation";
+import { deleteStudentObservations } from "./services/deleteStudentObservations";
+import { deleteTeacherObservations } from "./services/deleteTeacherObservations";
+import type { SessionSectionInfo } from "./services/getSessionSectionInfo";
+import type { SessionInfo } from "./services/getSessionByJoinCode";
+import OfflineIndicator from "./components/Status/OfflineIndicator";
+import { getSessionSectionInfo } from "./services/getSessionSectionInfo";
 
 
 //Affect Icon Svg Imports 
@@ -34,9 +34,9 @@ import relaxedAffectIcon from "./assets/images/relaxed_affect.svg";
 import tiredAffectIcon from "./assets/images/tired_affect.svg";
 import sadAffectIcon from "./assets/images/sad_affect.svg";
 
-import { storeObservationLocally, offlineLogging } from "./utils/offlineQueue";
-import { updateSessionObservers } from "./utils/updateSessionObservers";
-import { updateUserSessions } from "./utils/updateUserSessions";
+import { storeObservationLocally, offlineLogging } from "./services/offlineQueue";
+import { updateSessionObservers } from "./services/updateSessionObservers";
+import { updateUserSessions } from "./services/updateUserSessions";
 
 //Defines the behavior and design of the screen allowing users to make observations on both teachers an students
 export default function ObservationSessionScreen() {

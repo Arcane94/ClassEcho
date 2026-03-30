@@ -1,12 +1,12 @@
 //File Imports
-import "./components/SmallTextForm"
-import './components/DateForm'
+import "./components/Form/SmallTextForm"
+import './components/Form/DateForm'
 
 //Package Imports
 import { useState, useEffect} from "react";
-import SmallTextForm from "./components/SmallTextForm";
-import DateForm from "./components/DateForm";
-//import ChangeTimeModal from "./components/ChangeTimeModal";
+import SmallTextForm from "./components/Form/SmallTextForm";
+import DateForm from "./components/Form/DateForm";
+//import ChangeTimeModal from "./components/Modal/ChangeTimeModal";
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "./config";

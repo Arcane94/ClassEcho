@@ -1,6 +1,6 @@
 import './App.css'
 import './index.css'
-import './assets/variables.css'
+import './assets/styles/variables.css'
 import ObservationScreen from './ObservationScreen'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginScreen from './LoginScreen'

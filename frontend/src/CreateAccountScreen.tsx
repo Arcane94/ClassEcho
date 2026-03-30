@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 //File Imports
-import { createAccountOnBackend } from "./utils/createAccountOnBackend";
-import LargeTextForm from "./components/LargeTextForm";
+import { createAccountOnBackend } from "./services/createAccountOnBackend";
+import LargeTextForm from "./components/Form/LargeTextForm";
 
 export default function CreateAccountScreen() {
     //State to hold username, email, password, and errorMsg inputs

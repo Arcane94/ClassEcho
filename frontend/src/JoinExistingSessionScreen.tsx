@@ -5,8 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 //File Imports
-import LargeTextForm from "./components/LargeTextForm";
-import { getSessionByJoinCode } from "./utils/getSessionByJoinCode";
+import LargeTextForm from "./components/Form/LargeTextForm";
+import { getSessionByJoinCode } from "./services/getSessionByJoinCode";
 
 export default function JoinExistingSessionScreen() {
     //Search params

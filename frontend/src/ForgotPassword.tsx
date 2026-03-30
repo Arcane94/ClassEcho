@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 //File Imports
-import LargeTextForm from "./components/LargeTextForm";
-import { requestPasswordResetCode } from "./utils/requestPasswordResetCode";
+import LargeTextForm from "./components/Form/LargeTextForm";
+import { requestPasswordResetCode } from "./services/requestPasswordResetCode";
 
 export default function ForgotPasswordScreen() {
     //State to hold username/email input
