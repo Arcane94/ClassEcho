@@ -1,7 +1,17 @@
 import { API_BASE_URL } from "../config";
+import {
+  getBackendUnavailableMessage,
+  getErrorMessageFromPayload,
+  readJsonResponse,
+  type ApiResult,
+} from "./apiHelpers";
 
 // Calls backend route to reset a user's password using identifier and reset code
-export async function resetUserPassword(identifier: string, resetCode: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function resetUserPassword(
+  identifier: string,
+  resetCode: string,
+  newPassword: string,
+): Promise<ApiResult<{ message: string }>> {
   try {
     const response = await fetch(`${API_BASE_URL}/user/password-reset/confirm`, {
       method: "PUT",
@@ -11,24 +21,42 @@ export async function resetUserPassword(identifier: string, resetCode: string, n
       body: JSON.stringify({ identifier, reset_code: resetCode, new_password: newPassword }),
     });
 
+    const payload = await readJsonResponse<{ error?: string; message?: string }>(response);
+
     if (!response.ok) {
-      const errorData = await response.json();
       return {
         success: false,
-        error: errorData.error || "Failed to reset password",
+        status: response.status,
+        reason: payload ? "http" : "invalid-response",
+        error: getErrorMessageFromPayload(
+          payload,
+          response.status >= 500
+            ? "The server could not reset the password. Check the backend logs and try again."
+            : "Failed to reset password.",
+        ),
       };
     }
 
-    const result = await response.json();
+    if (!payload) {
+      return {
+        success: false,
+        status: response.status,
+        reason: "invalid-response",
+        error: "The server returned an unexpected password reset response. Please try again.",
+      };
+    }
+
     return {
       success: true,
-      message: result.message || "Password reset successful",
+      status: response.status,
+      result: { message: payload.message || "Password reset successful" },
     };
   } catch (err) {
     console.error("Error resetting user password:", err);
     return {
       success: false,
-      error: "Network error",
+      reason: "network",
+      error: getBackendUnavailableMessage("reset the password"),
     };
   }
 }

@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config";
 import type { TeacherObservationData } from "./createTeacherObservation";
+import { getUserById } from "./getUserById";
 
 //Calls server and retrieves all teacher observations for a given session
 export async function getAllTeacherObservationsForSession(sessionId: string | number): Promise<TeacherObservationData[]> {
@@ -18,7 +19,32 @@ export async function getAllTeacherObservationsForSession(sessionId: string | nu
     
     //Save and return collected data
     const data = await response.json();
-    return data || [];
+    const observations = Array.isArray(data) ? data as TeacherObservationData[] : [];
+    const missingObserverIds = Array.from(
+      new Set(
+        observations
+          .filter((observation) => !observation.observer_name && Number.isFinite(Number(observation.observer_id)))
+          .map((observation) => Number(observation.observer_id)),
+      ),
+    );
+
+    if (missingObserverIds.length === 0) {
+      return observations;
+    }
+
+    const users = await Promise.all(missingObserverIds.map((observerId) => getUserById(observerId)));
+    const observerNameMap = new Map<number, string>();
+
+    users.forEach((user) => {
+      if (user) {
+        observerNameMap.set(user.user_id, user.username);
+      }
+    });
+
+    return observations.map((observation) => ({
+      ...observation,
+      observer_name: observation.observer_name || observerNameMap.get(Number(observation.observer_id)) || "",
+    }));
 
   } catch (error) {
     console.error("Error fetching teacher observations:", error);

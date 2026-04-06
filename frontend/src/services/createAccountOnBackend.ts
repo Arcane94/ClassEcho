@@ -1,7 +1,17 @@
 import { API_BASE_URL } from "../config";
+import {
+  getBackendUnavailableMessage,
+  getErrorMessageFromPayload,
+  readJsonResponse,
+  type ApiResult,
+} from "./apiHelpers";
 
 // Calls the server and sends all the data needed to create a user's account
-export async function createAccountOnBackend(username: string, email: string, password: string): Promise<{success: boolean; error?: string; result?: any}> {
+export async function createAccountOnBackend(
+  username: string,
+  email: string,
+  password: string,
+): Promise<ApiResult<{ user_id: number }>> {
   try {
     const response = await fetch(`${API_BASE_URL}/user`, {
       method: "POST",
@@ -11,24 +21,42 @@ export async function createAccountOnBackend(username: string, email: string, pa
       body: JSON.stringify({ username, email, password }),
     });
 
+    const payload = await readJsonResponse<{ user_id: number; error?: string; message?: string }>(response);
+
     if (!response.ok) {
-      const errorData = await response.json();
       return {
         success: false,
-        error: errorData.error || "Failed to create account",
+        status: response.status,
+        reason: payload ? "http" : "invalid-response",
+        error: getErrorMessageFromPayload(
+          payload,
+          response.status >= 500
+            ? "The server could not create the account. Check the backend logs and database connection, then try again."
+            : "Failed to create account.",
+        ),
       };
     }
 
-    const result = await response.json();
+    if (!payload) {
+      return {
+        success: false,
+        status: response.status,
+        reason: "invalid-response",
+        error: "The server returned an unexpected signup response. Check the backend logs and try again.",
+      };
+    }
+
     return {
       success: true,
-      result,
+      status: response.status,
+      result: payload,
     };
   } catch (err) {
     console.error("Error creating user's account:", err);
     return {
       success: false,
-      error: "Network error",
+      reason: "network",
+      error: getBackendUnavailableMessage("create an account"),
     };
   }
 }

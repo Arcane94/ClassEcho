@@ -2,7 +2,7 @@ import { API_BASE_URL } from "../config";
 
 export interface SessionInfo {
   session_id: number;
-  observer_name: string;
+  creator: number;
   teacher_name: string;
   session_name: string;
   lesson_description: string | null;
@@ -11,6 +11,7 @@ export interface SessionInfo {
   join_code: string;
   observers: number[] | null;
   editors: number[] | null;
+  student_id_numeric_only: boolean;
 }
 
 // Calls the server to retrieve session information using a join code
@@ -33,7 +34,11 @@ export async function getSessionByJoinCode(
       };
     }
 
-    const session: SessionInfo = await response.json();
+    const rawSession = await response.json();
+    const session: SessionInfo = {
+      ...rawSession,
+      student_id_numeric_only: Boolean(Number(rawSession.student_id_numeric_only ?? 0)),
+    };
     return {
       success: true,
       session,

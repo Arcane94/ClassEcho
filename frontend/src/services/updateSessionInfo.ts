@@ -1,11 +1,11 @@
 import { API_BASE_URL } from "../config";
 
 interface UpdateSessionInfoPayload {
-  observer_name: string;
   teacher_name: string;
   session_name: string;
   lesson_description: string;
   join_code: string;
+  student_id_numeric_only: boolean;
 }
 
 //Uses a given sessionId and session details to update a session in the database

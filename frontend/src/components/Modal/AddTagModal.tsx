@@ -1,48 +1,53 @@
-import {useState} from 'react';
+import { useState } from "react";
 
 interface AddTagProps {
-    onClose: () => void;
-    onAddTag: (key: string, value: string) => void;
-    modalHeader: string;
-    tagSection: string;
+  onClose: () => void;
+  onAddTag: (key: string, value: string) => void;
+  modalHeader: string;
+  tagSection: string;
 }
 
 export default function AddTagModal({ onClose, tagSection, onAddTag, modalHeader }: AddTagProps) {
-    //State to store new tag naem
-    const [tagName, setTagName] = useState('');
+  const [tagName, setTagName] = useState("");
 
-    const handleSubmit = () => {
-        if (tagName.trim() !== '') {
-            onAddTag(tagSection, tagName);
-            setTagName('');
-        }
-        onClose();
-      };
+  const handleSubmit = () => {
+    if (tagName.trim() !== "") {
+      onAddTag(tagSection, tagName.trim());
+      setTagName("");
+    }
 
-    return (
-        //Modal background overlay
-        <div className="fixed inset-0 bg-grey flex items-center justify-center z-50 bg-[rgba(0,0,0,0.3)]">
-            <div className="bg-white px-3 py-2" >
-                <div className="flex flex-col">
-                    <label className="py-1">{modalHeader}</label>
-                    <input
-                    type="text"
-                    value={tagName}
-                    onChange={e => setTagName(e.target.value)}
-                    placeholder="Enter text"
-                    className={`mt-1 pl-2 mb-3 border h-[30px] rounded-sm focus:outline-none`}
-                    />
-                </div>
-                {/*Bottom bar with 'Cancel' and 'Apply' options*/}
-                <div className="flex justify-end items-center gap-2 mb-2">
-                    <button onClick={() => onClose()} className='border-1 border-[var(--grey-accent)] p-1.5'>
-                        Cancel
-                    </button>
-                    <button onClick={() => handleSubmit()} className='bg-[var(--accent-color)] p-1.5'>
-                        Apply
-                    </button>
-                </div>
-            </div>
+    onClose();
+  };
+
+  return (
+    <div className="observation-modal-overlay">
+      <div className="observation-modal">
+        <h2 className="observation-modal-title">{modalHeader}</h2>
+        <p className="observation-modal-copy">Add a tag for this session.</p>
+
+        <div style={{ marginTop: "1rem" }}>
+          <label className="observation-field">
+            <span className="observation-field-label">Tag Name</span>
+            <input
+              type="text"
+              value={tagName}
+              onChange={(event) => setTagName(event.target.value)}
+              placeholder="Enter tag text"
+              className="observation-field-input"
+              autoFocus
+            />
+          </label>
         </div>
-    )
+
+        <div className="observation-modal-actions">
+          <button type="button" onClick={onClose} className="observation-button observation-button--secondary">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSubmit} className="observation-button observation-button--accent">
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

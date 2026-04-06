@@ -1,0 +1,94 @@
+import { ArrowRight, BarChart3, LogOut, Microscope, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+export default function ToolHubPage() {
+    const navigate = useNavigate();
+    const username = localStorage.getItem("username");
+
+    const handleSignOut = () => {
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("username");
+        navigate("/");
+    };
+
+    return (
+        <div className="min-h-screen bg-[#f7fbff] px-6 py-8 md:px-10">
+            <div className="mx-auto flex max-w-6xl flex-col gap-8">
+                <header className="flex flex-col gap-6 rounded-3xl border border-[rgba(35,171,248,0.18)] bg-white/90 p-8 shadow-[0_24px_70px_rgba(14,76,113,0.1)] backdrop-blur md:flex-row md:items-end md:justify-between">
+                    <div className="max-w-3xl">
+                        <img
+                            src="/logo/logo.png"
+                            alt="ClassEcho"
+                            className="mb-5 h-14 w-auto drop-shadow-[0_10px_18px_rgba(14,76,113,0.14)]"
+                        />
+                        <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-[rgba(255,195,23,0.18)] px-4 py-2 text-sm font-medium text-[var(--brand-navy)]">
+                            <Sparkles className="h-4 w-4" />
+                            {username ? `Hi, ${username}` : "Hi there"}
+                        </p>
+                        <h1 className="text-3xl font-semibold text-[var(--brand-navy)] md:text-4xl">
+                            Welcome to ClassEcho.
+                        </h1>
+                        <p className="mt-3 text-base text-[var(--text-muted)] md:text-lg">
+                            Use Observation Mode to record classroom observations, or switch to Visualization Mode to review patterns, results, and trends.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="inline-flex items-center gap-2 self-start rounded-full border border-[rgba(55,157,234,0.18)] px-4 py-2 text-sm font-medium text-[var(--brand-navy)] transition hover:border-[rgba(255,195,23,0.34)] hover:bg-[rgba(255,255,255,0.96)]"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                    </button>
+                </header>
+
+                <section className="grid gap-6 lg:grid-cols-2">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/session-options")}
+                        className="group flex h-full flex-col rounded-3xl border border-[rgba(55,157,234,0.18)] bg-white p-8 text-left shadow-[0_24px_60px_rgba(14,76,113,0.08)] transition hover:-translate-y-1 hover:border-[rgba(255,195,23,0.34)] hover:shadow-[0_30px_70px_rgba(14,76,113,0.12)]"
+                    >
+                        <div>
+                            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(255,195,23,0.18)] text-[var(--brand-navy)]">
+                                <Microscope className="h-7 w-7" />
+                            </div>
+                        </div>
+
+                        <div className="mt-8">
+                            <h2 className="text-2xl font-semibold text-[var(--brand-navy)]">Observation Mode</h2>
+                            <p className="mt-3 text-base leading-7 text-[var(--text-muted)]">
+                                Create sessions, join live observations, record observations, and manage previous work from one place.
+                            </p>
+                        </div>
+
+                        <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-navy)]">
+                            Open Observation Mode
+                            <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                        </div>
+                    </button>
+
+                    <div className="flex h-full flex-col rounded-3xl border border-[rgba(55,157,234,0.18)] bg-white p-8 shadow-[0_24px_60px_rgba(14,76,113,0.08)]">
+                        <div>
+                            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(35,171,248,0.14)] text-[var(--brand-navy)]">
+                                <BarChart3 className="h-7 w-7" />
+                            </div>
+                        </div>
+
+                        <div className="mt-8">
+                            <h2 className="text-2xl font-semibold text-[var(--brand-navy)]">Visualization Mode</h2>
+                            <p className="mt-3 text-base leading-7 text-[var(--text-muted)]">
+                                Review observation data, explore patterns over time, and turn your session results into something easier to understand.
+                            </p>
+                        </div>
+
+                        <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-navy)]">
+                            Explore Visualization Mode
+                            <ArrowRight className="h-4 w-4" />
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    );
+}

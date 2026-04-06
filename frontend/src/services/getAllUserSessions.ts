@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "../config";
-import type { SessionData } from "./fetchSessionById";
+import { normalizeSessionData, type SessionData } from "./fetchSessionById";
 
 //Calls server and retrieves all sessions associated with a user's account
 export async function getAllUserSessions(userId: string | number): Promise<SessionData[]> {
@@ -18,7 +18,9 @@ export async function getAllUserSessions(userId: string | number): Promise<Sessi
     
     //Save and return collected data
     const data = await response.json();
-    return data.sessions || [];
+    return Array.isArray(data.sessions)
+      ? data.sessions.map((session: Record<string, unknown>) => normalizeSessionData(session))
+      : [];
 
   } catch (error) {
     console.error("Error fetching user sessions:", error);

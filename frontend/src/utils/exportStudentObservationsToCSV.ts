@@ -1,5 +1,6 @@
 import { getAllStudentObservationsForSession } from "../services/getAllStudentObservationsForSession";
 import type { StudentObservationData } from "../services/createStudentObservation";
+import { escapeCsvCell, getStudentTagCsvColumns } from "./observationTagExport";
 
 //Exports student observations for a session to a CSV file
 export async function exportStudentObservationsToCSV(sessionId: string | number): Promise<void> {
@@ -15,56 +16,45 @@ export async function exportStudentObservationsToCSV(sessionId: string | number)
     //Define CSV headers
     const headers = [
       "Session ID",
+      "Observer ID",
+      "Observer Name",
       "Student ID",
       "On Task",
-      "Behavior Tags",
+      "Start Time",
+      "End Time",
+      "behavior_tags",
+      "function_tags",
+      "structure_tags",
       "Affect",
-      "Custom Tags",
       "Note",
-      "Recording",
-      "Submitted By User",
-      "Picture Attachments"
+      "Recording"
     ];
 
     //Convert observations to CSV rows
     const rows = observations.map((obs: StudentObservationData) => {
-      // Helper function to safely convert to array and join
-      const safeJoin = (value: unknown): string => {
-        if (Array.isArray(value)) {
-          return value.join(";");
-        } else if (typeof value === 'object' && value !== null) {
-          // If it's an object, extract all values that are arrays and flatten them
-          const allValues: string[] = [];
-          Object.values(value as Record<string, unknown>).forEach((v: unknown) => {
-            if (Array.isArray(v)) {
-              allValues.push(...v);
-            }
-          });
-          return allValues.join(";");
-        } else if (value) {
-          return String(value);
-        }
-        return "";
-      };
+      const tagColumns = getStudentTagCsvColumns(obs.selected_tags ?? obs.behavior_tags);
 
       return [
         obs.session_id,
+        obs.observer_id,
+        obs.observer_name || "",
         obs.student_id || "",
         obs.on_task !== undefined ? obs.on_task : "",
-        safeJoin(obs.behavior_tags),
-        safeJoin(obs.affect),
-        safeJoin(obs.custom_tags),
+        obs.start_time || "",
+        obs.end_time || "",
+        tagColumns.behavior_tags,
+        tagColumns.function_tags,
+        tagColumns.structure_tags,
+        Array.isArray(obs.affect) ? obs.affect.join(";") : "",
         obs.note || "",
         obs.recording !== undefined ? obs.recording : "",
-        obs.submitted_by_user !== undefined ? obs.submitted_by_user : "",
-        obs.picture_attachments || ""
       ];
     });
 
     //Create CSV content
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+      ...rows.map(row => row.map((cell) => escapeCsvCell(cell)).join(","))
     ].join("\n");
 
     //Create blob and download

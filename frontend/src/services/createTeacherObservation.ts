@@ -1,17 +1,20 @@
+import type { ObservationRecordingFlag } from "../utils/observationLogging";
 import { API_BASE_URL } from "../config";
 
 // Defines the call to create a new teacher observation in database
 
 export interface TeacherObservationData {
     session_id: number;
+    observer_id: number;
+    observer_name?: string;
+    client_observation_id?: string;
     student_id?: string;
     start_time?: string;
+    end_time?: string;
     teacher_position?: string;
     selected_tags?: Record<string, string[]>;
-    submitted_by_user?: boolean;
-    recording?: boolean;
+    recording: ObservationRecordingFlag;
     note?: string;
-    picture_attachments?: string;
     //New tag sent only to controller in server to loosen error-checking for single click observations
     single_click?: boolean; 
   }

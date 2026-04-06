@@ -13,11 +13,12 @@ export interface SessionSectionInput {
 
 export interface CreateSessionPayload {
   local_time?: string;
-  observer_name: string;
+  creator: number;
   teacher_name: string;
   session_name: string;
   lesson_description?: string;
   join_code: string;
+  student_id_numeric_only: boolean;
   // Start with the current user's id in these arrays
   observers?: number[];
   editors?: number[];
@@ -37,9 +38,9 @@ export async function createSession(data: CreateSessionPayload): Promise<{ sessi
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
       console.log("API Error:", errorData);
-      throw new Error(errorData.message || "Failed to create session");
+      throw new Error(errorData.error || errorData.message || "Failed to create session");
     }
 
     const result = await response.json();
