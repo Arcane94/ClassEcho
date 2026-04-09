@@ -1,3 +1,4 @@
+// Updates the saved editable-session list for a user when they gain or lose edit access.
 import { API_BASE_URL } from "../config";
 
 //Uses a given userId and sessionId to update the edit_sessions array of that user in the database

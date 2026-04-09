@@ -1,3 +1,4 @@
+// Submits a new password after the user has verified their reset code.
 import { API_BASE_URL } from "../config";
 import {
   getBackendUnavailableMessage,

@@ -1,3 +1,4 @@
+// Small text component that fades itself out after a delay.
 import React, { useEffect, useState } from 'react';
 
 interface FadeOutTextProps {

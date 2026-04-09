@@ -1,3 +1,4 @@
+// Lightweight connectivity check used to confirm the backend is online.
 import { API_BASE_URL } from "../config";
 
 //exportable function that checks if the user is currently online

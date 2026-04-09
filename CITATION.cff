@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+title: "ClassEcho: A Tool for Observing, Visualizing, and Analyzing Student-Teacher Interactions in K-12 Computing Classrooms"
+message: "If you use this software, please cite the following work."
+type: software
+
+authors:
+  - family-names: Limke
+    given-names: Ally
+  - family-names: Rajapaksha
+    given-names: Yasitha
+  - family-names: Reed
+    given-names: Eli
+  - family-names: Hill
+    given-names: Marnie
+  - family-names: Lytle
+    given-names: Nicholas
+  - family-names: Cateté
+    given-names: Veronica
+  - family-names: Barnes
+    given-names: Tiffany
+
+preferred-citation:
+  type: conference-paper
+  title: "ClassEcho: A Tool for Observing, Visualizing, and Analyzing Student-Teacher Interactions in K-12 Computing Classrooms"
+  authors:
+    - family-names: Limke
+      given-names: Ally
+    - family-names: Rajapaksha
+      given-names: Yasitha
+    - family-names: Reed
+      given-names: Eli
+    - family-names: Hill
+      given-names: Marnie
+    - family-names: Lytle
+      given-names: Nicholas
+    - family-names: Cateté
+      given-names: Veronica
+    - family-names: Barnes
+      given-names: Tiffany
+  year: 2026
+  month: 5
+  doi: "10.1145/3772363.3798572"
+  conference:
+    name: "CHI Conference on Human Factors in Computing Systems (Extended Abstracts)"
+  start: 1
+  end: 7

@@ -1,6 +1,8 @@
+// Updates the editable session metadata fields for a session creator or full editor.
 import { API_BASE_URL } from "../config";
 
 interface UpdateSessionInfoPayload {
+  requester_id?: string | number;
   teacher_name: string;
   session_name: string;
   lesson_description: string;

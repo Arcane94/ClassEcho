@@ -1,3 +1,4 @@
+// Formats the current local time for display in the observation tool.
 export function getCurrentTimeFormatted(): string {
     const now = new Date();
   

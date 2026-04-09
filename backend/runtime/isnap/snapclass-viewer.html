@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SnapClass Code Viewer</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #f7fafc;
+      }
+
+      #world {
+        position: absolute;
+        inset: 0;
+      }
+    </style>
+
+    <script src="src/morphic.js?version=2025-03-20"></script>
+    <script src="src/symbols.js?version=2024-11-24"></script>
+    <script src="src/widgets.js?version=2025-03-17"></script>
+    <script src="src/blocks.js?version=2025-05-05"></script>
+    <script src="src/threads.js?version=2025-03-30"></script>
+    <script src="src/objects.js?version=2025-03-23"></script>
+    <script src="src/scenes.js?version=2024-05-28"></script>
+    <script src="src/gui.js?version=2025-05-05"></script>
+    <script src="src/paint.js?version=2023-05-24"></script>
+    <script src="src/lists.js?version=2025-02-27"></script>
+    <script src="src/byob.js?version=2024-12-18"></script>
+    <script src="src/tables.js?version=2023-08-17"></script>
+    <script src="src/sketch.js?version=2023-05-24"></script>
+    <script src="src/video.js?version=2019-06-27"></script>
+    <script src="src/maps.js?version=2021-06-15"></script>
+    <script src="src/extensions.js?version=2025-03-11"></script>
+    <script src="src/xml.js?version=2021-07-05"></script>
+    <script src="src/store.js?version=2025-03-12"></script>
+    <script src="src/locale.js?version=2025-05-05"></script>
+    <script src="src/cloud.js?version=2023-04-12"></script>
+    <script src="src/api.js?version=2024-02-22"></script>
+    <script src="src/embroider.js?version=2024-05-09"></script>
+    <script src="src/sha512.js?version=2019-06-27"></script>
+    <script src="src/FileSaver.min.js?version=2019-06-27"></script>
+
+    <script>
+      const VIEWER_MESSAGE_SOURCE = "snapclass-code-viewer";
+      let world = null;
+      let ide = null;
+      let pendingPayload = null;
+      let lastFrameTime = 0;
+
+      function selectSprite(spriteName) {
+        try {
+          if (!spriteName || !ide || !ide.stage || typeof ide.selectSprite !== "function") {
+            return;
+          }
+
+          const normalizedName = String(spriteName).replace(/^"+|"+$/g, "");
+          const candidates = [ide.stage].concat(ide.stage.children || []);
+          const sprite = candidates.find((candidate) => {
+            return candidate && typeof candidate.name === "string" && candidate.name === normalizedName;
+          });
+
+          if (sprite) {
+            ide.selectSprite(sprite);
+          }
+        } catch (error) {
+          console.warn("Failed to select sprite", error);
+        }
+      }
+
+      function loadSnapshot(payload) {
+        if (!payload) {
+          return;
+        }
+
+        if (!ide) {
+          pendingPayload = payload;
+          return;
+        }
+
+        const xml = String(payload.code || "").replace(/^\uFEFF/, "");
+        ide.droppedText(xml, "project.xml", "text/xml");
+
+        window.setTimeout(() => {
+          selectSprite(payload.spriteName);
+        }, 80);
+      }
+
+      function animationLoop(timestamp) {
+        window.requestAnimationFrame(animationLoop);
+
+        if (!world) {
+          return;
+        }
+
+        if (timestamp - lastFrameTime < 1000 / 60) {
+          return;
+        }
+
+        world.doOneCycle();
+        lastFrameTime = timestamp;
+      }
+
+      window.addEventListener("message", (event) => {
+        const data = event.data || {};
+        if (data.source !== VIEWER_MESSAGE_SOURCE || data.type !== "load-snapshot") {
+          return;
+        }
+
+        loadSnapshot(data.payload || null);
+      });
+
+      window.addEventListener("load", () => {
+        world = new WorldMorph(document.getElementById("world"));
+        new IDE_Morph().openIn(world);
+        ide = world.children[0];
+
+        try {
+          if (typeof ide.toggleStageSize === "function") {
+            ide.toggleStageSize();
+          }
+        } catch (error) {
+          console.warn("Failed to resize stage", error);
+        }
+
+        if (pendingPayload) {
+          loadSnapshot(pendingPayload);
+          pendingPayload = null;
+        }
+
+        window.parent.postMessage({ source: VIEWER_MESSAGE_SOURCE, type: "ready" }, "*");
+        window.requestAnimationFrame(animationLoop);
+      });
+    </script>
+  </head>
+  <body>
+    <canvas id="world" tabindex="1"></canvas>
+  </body>
+</html>

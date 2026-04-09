@@ -2,7 +2,7 @@
  * Create Model for Session information, model should be able to be used as a foreign key in both 
  * Student Observation and Teacher Obseravtion Tables
 */
-const db = require('../config/dbConfig.js');
+const { observationDb: db } = require('../db/connections');
 
 const TABLE = 'session';
 
@@ -71,9 +71,32 @@ exports.getByJoinCode = async function (join_code) {
   return row || null;
 };
 
+exports.listByCreator = async function listByCreator(creator) {
+  const rows = await db(TABLE)
+    .where({ creator })
+    .orderBy('server_time', 'desc')
+    .orderBy('session_id', 'desc');
+
+  return rows || [];
+};
+
+exports.listByIds = async function listByIds(sessionIds) {
+  if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+    return [];
+  }
+
+  const rows = await db(TABLE)
+    .whereIn('session_id', sessionIds)
+    .orderBy('server_time', 'desc')
+    .orderBy('session_id', 'desc');
+
+  return rows || [];
+};
+
 // Deletes a session from the database using its session id
-exports.deleteBySessionId = async function (session_id) {
-  const deletedRows = await db(TABLE)
+exports.deleteBySessionId = async function (session_id, trx = null) {
+  const dbOrTrx = trx || db;
+  const deletedRows = await dbOrTrx(TABLE)
     .where({ session_id })
     .del();
   return deletedRows;

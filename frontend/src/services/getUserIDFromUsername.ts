@@ -1,3 +1,4 @@
+// Resolves a username or email into a numeric user id for sharing workflows.
 import { API_BASE_URL } from "../config";
 
 // Calls backend route to get a user's id by username or email

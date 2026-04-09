@@ -1,5 +1,4 @@
-//Define routes for the teacherObservations Model
-//POST for new teacher observations....
+// Teacher observation routes: create, delete, and fetch teacher logs for a session.
 
 //Basic Setup
 const express = require('express');
@@ -10,6 +9,8 @@ const teacherController = require('../controllers/TeacherObservationController.j
 router.post('/', teacherController.createTeacherObservation);
 //Post route to delete a new student observation
 router.post('/delete', teacherController.deleteTeacherObservation);
+//Get observation count for a session
+router.get('/session/:session_id/count', teacherController.getObservationCountBySessionId);
 //Get all observations for a session
 router.get('/session/:session_id', teacherController.getObservationsBySessionId);
 //Get a single observation by id

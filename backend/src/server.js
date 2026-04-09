@@ -1,3 +1,4 @@
+// Backend server bootstrap: loads config and starts listening on the configured port.
 const app = require('./app');
 const config = require('./config/appConfig');
 

@@ -1,6 +1,6 @@
 //Create Student Observation Model
 
-const db = require('../config/dbConfig.js');
+const { observationDb: db } = require('../db/connections');
 const TABLE = 'student_observation'
 const DUPLICATE_TIME_TOLERANCE_MS = 1000;
 
@@ -100,6 +100,22 @@ exports.deleteMultiple = async (ids) => {
 
   // returns number of rows deleted
   return deletedRows; 
+};
+
+exports.deleteBySessionId = async function deleteBySessionId(session_id, trx = null) {
+  const dbOrTrx = trx || db;
+  return dbOrTrx(TABLE)
+    .where({ session_id })
+    .del();
+};
+
+exports.countBySessionId = async function countBySessionId(session_id) {
+  const result = await db(TABLE)
+    .where({ session_id })
+    .count({ count: "*" })
+    .first();
+
+  return Number(result?.count ?? 0);
 };
 
 exports.update = async function (id, patch) {

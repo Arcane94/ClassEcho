@@ -1,3 +1,4 @@
+// Sends a new account signup request to the backend and returns the created user info.
 import { API_BASE_URL } from "../config";
 import {
   getBackendUnavailableMessage,

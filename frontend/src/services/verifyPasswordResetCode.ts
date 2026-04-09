@@ -1,3 +1,4 @@
+// Confirms whether a password reset code is valid before allowing a password reset.
 import { API_BASE_URL } from "../config";
 import {
   getBackendUnavailableMessage,

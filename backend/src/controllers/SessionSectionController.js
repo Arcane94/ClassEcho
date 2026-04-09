@@ -14,19 +14,21 @@ exports.createSessionSection = async (req, res) => {
         //Save Body fields
         const {
             session_id,
+            session_sector,
             session_segtor,
             section_name
         } = req.body;
+        const normalizedSessionSector = session_sector ?? session_segtor;
 
         //Ensure fields are all filled
-        if (!session_id || !session_segtor || !section_name) {
+        if (!session_id || !normalizedSessionSector || !section_name) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
         //Save all fields to send to model
         const info = {
           session_id,
-          session_segtor,
+          session_sector: normalizedSessionSector,
           section_name,
         };
 

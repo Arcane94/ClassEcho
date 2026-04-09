@@ -1,4 +1,4 @@
-//Define routes for the user Model
+// User routes: expose account, session-list, and access-related endpoints.
 
 //Basic Setup
 const express = require('express');
@@ -25,6 +25,9 @@ router.get('/:id/sessions/all', userController.getUserSessions);
 
 //GET route to retrieve information of all sessions the user has edit access to
 router.get('/:id/sessions/edit', userController.getUserEditSessions);
+
+//GET route to retrieve all sessions the user can access through ownership or sharing
+router.get('/:id/sessions/access', userController.getUserAccessibleSessions);
 
 //GET route to retrieve a user id by username
 router.get('/username/:username', userController.getUserIdByUsername);

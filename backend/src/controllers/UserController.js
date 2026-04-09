@@ -3,7 +3,9 @@
 //Retrieve the User Model
 const User = require(`../models/UserModel`);
 const Session = require(`../models/SessionModel`);
+const SessionAccess = require('../models/SessionAccessModel');
 const config = require('../config/appConfig');
+const { describeSessionAccess, serializeSessionForUser } = require('../utils/sessionAccess');
 
 // Import bycrypt for password hashing
 const bcrypt = require('bcrypt');
@@ -406,6 +408,92 @@ exports.getUserEditSessions = async (req, res) => {
         return res.json({ sessions: sessionInfo });
     } catch(error) {
         console.error('Error retrieving user edit sessions:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+}
+
+//Logic to retrieve every saved session this user can access through ownership or shared permissions
+//GET /user/:id/sessions/access
+exports.getUserAccessibleSessions = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const normalizedUserId = Number(id);
+
+        if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+            return res.status(400).json({ error: 'Invalid user id' });
+        }
+
+        const user = await User.getByUserId(normalizedUserId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const [creatorSessions, sharedAccessRows] = await Promise.all([
+            Session.listByCreator(normalizedUserId),
+            SessionAccess.listByUserId(normalizedUserId),
+        ]);
+
+        const sharedSessionIds = Array.from(
+            new Set(
+                sharedAccessRows
+                    .map((row) => Number(row.session_id))
+                    .filter((sessionId) => Number.isInteger(sessionId) && sessionId > 0),
+            ),
+        );
+
+        const sharedSessions = sharedSessionIds.length > 0
+            ? await Session.listByIds(sharedSessionIds)
+            : [];
+
+        const sharedAccessBySessionId = new Map(
+            sharedAccessRows.map((row) => [String(row.session_id), row]),
+        );
+
+        const mergedSessions = new Map();
+
+        for (const session of creatorSessions) {
+            const accessDescriptor = await describeSessionAccess(session, normalizedUserId);
+            mergedSessions.set(
+                String(session.session_id),
+                serializeSessionForUser(session, accessDescriptor),
+            );
+        }
+
+        for (const session of sharedSessions) {
+            const key = String(session.session_id);
+            if (mergedSessions.has(key)) {
+                continue;
+            }
+
+            const accessDescriptor = await describeSessionAccess(
+                session,
+                normalizedUserId,
+            );
+
+            const serializedSession = serializeSessionForUser(session, {
+                ...accessDescriptor,
+                access_row: sharedAccessBySessionId.get(key) ?? accessDescriptor.access_row,
+            });
+
+            if (serializedSession.permissions?.can_view_session) {
+                mergedSessions.set(key, serializedSession);
+            }
+        }
+
+        const sessions = Array.from(mergedSessions.values()).sort((left, right) => {
+            const leftTime = Date.parse(left.server_time || left.local_time || '');
+            const rightTime = Date.parse(right.server_time || right.local_time || '');
+
+            if (!Number.isNaN(rightTime) && !Number.isNaN(leftTime) && rightTime !== leftTime) {
+                return rightTime - leftTime;
+            }
+
+            return Number(right.session_id) - Number(left.session_id);
+        });
+
+        return res.json({ sessions });
+    } catch (error) {
+        console.error('Error retrieving accessible sessions:', error);
         return res.status(500).json({ error: 'Server error' });
     }
 }

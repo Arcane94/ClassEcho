@@ -1,3 +1,4 @@
+// Fetches a user profile by id when the UI needs display names or email addresses.
 import { API_BASE_URL } from "../config";
 
 export interface UserSummary {

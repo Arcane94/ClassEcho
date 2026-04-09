@@ -1,9 +1,0 @@
-#Config Files
-config.js
-src/config/appConfig.js
-
-#Node modules
-node_modules/
-
-#OS Files
-.DS_Store

@@ -1,16 +1,21 @@
+// Fetches the section/tag configuration for a session when customizing observation fields.
 import { API_BASE_URL } from "../config";
 
 export interface SessionSectionInfo {
   section_id: number;
-  session_segtor: string;
+  session_sector: string;
   section_name: string;
   tags: string[];
 }
 
 // Calls server to retrieve all session sections and their tags
-export async function getSessionSectionInfo(sessionId: string): Promise<SessionSectionInfo[] | null> {
+export async function getSessionSectionInfo(sessionId: string, userId?: string | number | null): Promise<SessionSectionInfo[] | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/sections`);
+    const queryString =
+      userId !== undefined && userId !== null
+        ? `?${new URLSearchParams({ user_id: String(userId) }).toString()}`
+        : "";
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/sections${queryString}`);
 
     if (!response.ok) {
       if (response.status === 404) {

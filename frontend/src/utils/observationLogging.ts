@@ -1,3 +1,4 @@
+// Shared observation logging helpers for timestamps, window sizing, and recording flags.
 export type ObservationRecordingFlag = 0 | 1;
 
 const INSTANT_OBSERVATION_WINDOW_MS = 10_000;

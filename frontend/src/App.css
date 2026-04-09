@@ -1,3 +1,4 @@
+/* Global application styling for auth, observation, visualization, and workspace layouts. */
 #root {
   min-height: 100vh;
   min-height: 100dvh;
@@ -289,6 +290,32 @@
   text-align: center;
 }
 
+.login-legal-footer {
+  margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.login-legal-link {
+  color: #64748b;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.login-legal-link:hover {
+  color: var(--brand-navy);
+}
+
+.login-legal-separator {
+  color: #94a3b8;
+}
+
 .auth-shell {
   position: relative;
   z-index: 1;
@@ -299,6 +326,174 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.legal-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 64rem;
+  margin: 0 auto;
+  min-height: calc(100vh - clamp(3rem, 6vw, 5rem));
+  min-height: calc(100dvh - clamp(3rem, 6vw, 5rem));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.legal-panel {
+  width: min(100%, 58rem);
+  max-width: none;
+}
+
+.legal-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.9rem;
+}
+
+.legal-header-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: center;
+  gap: 0.75rem;
+  width: min(100%, 34rem);
+  text-align: center;
+}
+
+.legal-header .legal-header-logo {
+  width: min(100%, 11rem);
+  height: auto;
+}
+
+.legal-header-copy {
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.legal-header-title {
+  font-size: clamp(1.85rem, 3vw, 2.4rem);
+}
+
+.legal-header-description {
+  max-width: 30rem;
+  line-height: 1.58;
+}
+
+.legal-header-spacer {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+}
+
+.legal-meta {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.legal-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--brand-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--accent-color-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.legal-doc {
+  margin-top: 1.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.legal-doc-section {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--brand-border);
+  border-radius: 1.3rem;
+  background: rgba(248, 252, 255, 0.94);
+  box-shadow: 0 14px 28px var(--brand-shadow-soft);
+}
+
+.legal-doc-title {
+  color: var(--brand-navy);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.legal-doc-copy {
+  margin-top: 0.65rem;
+  color: #52607a;
+  font-size: 0.96rem;
+  line-height: 1.72;
+}
+
+.legal-doc-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.15rem;
+  color: #334155;
+}
+
+.legal-doc-list-item {
+  font-size: 0.95rem;
+  line-height: 1.68;
+}
+
+.legal-doc-list-item + .legal-doc-list-item {
+  margin-top: 0.45rem;
+}
+
+.legal-contact-block {
+  margin-top: 0.8rem;
+}
+
+.legal-contact-subtitle {
+  margin: 0;
+  color: var(--brand-navy);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.legal-contact-grid {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.legal-contact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--brand-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.legal-contact-name {
+  color: var(--brand-navy);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.legal-contact-email {
+  color: #52607a;
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 .auth-panel {
@@ -722,6 +917,72 @@
   box-shadow: 0 0 0 4px rgba(41, 221, 242, 0.18);
 }
 
+.observation-select-wrap {
+  position: relative;
+}
+
+.observation-select-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.observation-select-input option {
+  color: #0f172a;
+  background: white;
+  font-weight: 500;
+}
+
+.observation-select-arrow {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transform: translateY(-50%);
+}
+
+.observation-share-row {
+  display: grid;
+  gap: 0.85rem;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.observation-share-row__identity,
+.observation-share-row__role {
+  margin-bottom: 0;
+}
+
+.observation-share-row__role {
+  max-width: 14rem;
+}
+
+.observation-share-row__submit {
+  width: 100%;
+  justify-content: center;
+  align-self: end;
+}
+
+@media (min-width: 768px) {
+  .observation-share-row {
+    grid-template-columns: minmax(0, 1.7fr) minmax(12.75rem, 13.75rem) auto;
+  }
+
+  .observation-share-row__submit {
+    width: auto;
+    min-width: 7.5rem;
+    white-space: nowrap;
+  }
+}
+
 .observation-field-textarea {
   min-height: 6.75rem;
   resize: vertical;
@@ -918,6 +1179,32 @@
 
 .observation-button--danger {
   background: #dc2626;
+}
+
+.observation-button--soft-danger {
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  background: rgba(254, 242, 242, 0.92);
+  color: #b91c1c;
+  box-shadow: none;
+}
+
+.observation-button--soft-danger:hover {
+  border-color: rgba(220, 38, 38, 0.32);
+  background: rgba(254, 226, 226, 0.98);
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.12);
+}
+
+.observation-button--soft-warning {
+  border: 1px solid rgba(237, 165, 33, 0.24);
+  background: rgba(255, 222, 145, 0.28);
+  color: #8a5a00;
+  box-shadow: none;
+}
+
+.observation-button--soft-warning:hover {
+  border-color: rgba(180, 122, 0, 0.38);
+  background: rgba(255, 234, 176, 0.82);
+  box-shadow: 0 12px 24px rgba(180, 122, 0, 0.12);
 }
 
 .observation-inline-button {
@@ -1200,7 +1487,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .observation-session-card {
@@ -1217,6 +1504,7 @@
 .observation-session-card-main {
   width: 100%;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.8rem;
   padding: 1.2rem;
@@ -1301,6 +1589,10 @@
   gap: 0.35rem;
 }
 
+.observation-session-card-supplemental {
+  margin-top: 0.1rem;
+}
+
 .observation-session-card-description-toggle {
   align-self: flex-start;
   padding: 0;
@@ -1338,6 +1630,38 @@
 .observation-session-card-action-row > *,
 .observation-session-card-inline-row > * {
   flex: 1 1 12rem;
+}
+
+.observation-session-card-action-row--paired,
+.observation-session-card-inline-row--paired {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.observation-session-card-action-row--paired > *,
+.observation-session-card-inline-row--paired > * {
+  min-width: 0;
+}
+
+.observation-session-card-action-placeholder {
+  min-height: 2.7rem;
+  border-radius: 1rem;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.observation-session-card-action-row--paired .observation-button,
+.observation-session-card-inline-row--paired .observation-inline-button {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: 0.62rem 0.9rem;
+  border-radius: 1rem;
+  box-shadow: none;
+}
+
+.observation-session-card-action-row--paired .observation-button:hover,
+.observation-session-card-inline-row--paired .observation-inline-button:hover {
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
 }
 
 .observation-inline-button--compact {
@@ -2263,6 +2587,23 @@
     align-items: center;
   }
 
+  .legal-shell {
+    min-height: auto;
+    max-width: 48rem;
+  }
+
+  .legal-header-main {
+    width: min(100%, 28rem);
+  }
+
+  .legal-header .legal-header-logo {
+    width: min(100%, 9.6rem);
+  }
+
+  .legal-header-description {
+    max-width: 25rem;
+  }
+
   .login-title,
   .login-subtitle,
   .login-intro {
@@ -2471,6 +2812,63 @@
   .login-footer {
     margin-top: 1.2rem;
     padding-top: 1rem;
+  }
+
+  .login-legal-footer {
+    margin-top: 0.7rem;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .legal-panel {
+    width: 100%;
+  }
+
+  .legal-header {
+    gap: 0.7rem;
+  }
+
+  .legal-header-main {
+    width: min(100%, 24rem);
+    gap: 0.6rem;
+  }
+
+  .legal-header .legal-header-logo {
+    width: min(100%, 8.2rem);
+  }
+
+  .legal-header-title {
+    font-size: clamp(1.55rem, 5.3vw, 2rem);
+  }
+
+  .legal-header-description {
+    max-width: 22rem;
+    font-size: 0.92rem;
+    line-height: 1.52;
+  }
+
+  .legal-doc {
+    margin-top: 1.15rem;
+    gap: 0.8rem;
+  }
+
+  .legal-doc-section {
+    padding: 0.95rem 1rem;
+    border-radius: 1.15rem;
+  }
+
+  .legal-doc-title {
+    font-size: 1rem;
+  }
+
+  .legal-doc-copy,
+  .legal-doc-list-item {
+    font-size: 0.92rem;
+    line-height: 1.62;
+  }
+
+  .legal-contact-grid {
+    grid-template-columns: 1fr;
   }
 
   .login-feature-grid {
@@ -2818,6 +3216,10 @@
     flex-basis: 100%;
   }
 
+  .observation-session-card-inline-row--paired > *:last-child {
+    flex-basis: calc(50% - 0.35rem);
+  }
+
   .observation-session-card-action-row .observation-button,
   .observation-session-card-inline-row .observation-inline-button {
     min-height: 2.55rem;
@@ -2845,6 +3247,45 @@
   .auth-panel,
   .observation-panel {
     padding: 1.1rem;
+  }
+
+  .legal-panel {
+    padding: 1.1rem;
+  }
+
+  .legal-header {
+    gap: 0.55rem;
+  }
+
+  .legal-header-main {
+    width: min(100%, 17rem);
+    gap: 0.45rem;
+  }
+
+  .legal-header .legal-header-logo {
+    width: min(100%, 6.8rem);
+  }
+
+  .legal-header-copy {
+    gap: 0.22rem;
+  }
+
+  .legal-header-title {
+    font-size: clamp(1.32rem, 6.2vw, 1.7rem);
+    line-height: 1.06;
+  }
+
+  .legal-header-description {
+    max-width: none;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+
+  .legal-header-spacer,
+  .auth-back-button,
+  .observation-back-button {
+    width: 2.3rem;
+    height: 2.3rem;
   }
 
   .login-title {
@@ -2905,14 +3346,16 @@
     line-height: 1.5;
   }
 
-  .auth-panel-logo {
-    width: min(100%, 10rem);
+  .legal-meta {
+    margin-top: 0.85rem;
   }
 
-  .auth-back-button,
-  .observation-back-button {
-    width: 2.3rem;
-    height: 2.3rem;
+  .legal-meta-pill {
+    font-size: 0.76rem;
+  }
+
+  .auth-panel-logo {
+    width: min(100%, 10rem);
   }
 
   .observation-workspace-header {

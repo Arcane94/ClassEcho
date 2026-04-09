@@ -1,3 +1,4 @@
+// Workspace landing page that acts as the app's tool chooser.
 import { ArrowRight, BarChart3, LogOut, Microscope, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,8 +13,19 @@ export default function ToolHubPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f7fbff] px-6 py-8 md:px-10">
-            <div className="mx-auto flex max-w-6xl flex-col gap-8">
+        <div
+            className="relative min-h-screen overflow-hidden px-6 py-8 md:px-10"
+            style={{
+                background:
+                    "linear-gradient(180deg, #ffffff 0%, #f8fbff 24%, #eaf5ff 60%, #d5eafe 100%), #f6fbff",
+            }}
+        >
+            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                <div className="absolute -top-24 left-[-120px] h-[360px] w-[360px] rounded-full bg-[rgba(35,171,248,0.15)] blur-3xl" />
+                <div className="absolute bottom-[-140px] right-[-100px] h-[320px] w-[320px] rounded-full bg-[rgba(255,195,23,0.14)] blur-3xl" />
+            </div>
+
+            <div className="relative mx-auto flex max-w-6xl flex-col gap-8">
                 <header className="flex flex-col gap-6 rounded-3xl border border-[rgba(35,171,248,0.18)] bg-white/90 p-8 shadow-[0_24px_70px_rgba(14,76,113,0.1)] backdrop-blur md:flex-row md:items-end md:justify-between">
                     <div className="max-w-3xl">
                         <img
@@ -68,7 +80,11 @@ export default function ToolHubPage() {
                         </div>
                     </button>
 
-                    <div className="flex h-full flex-col rounded-3xl border border-[rgba(55,157,234,0.18)] bg-white p-8 shadow-[0_24px_60px_rgba(14,76,113,0.08)]">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/visualization")}
+                        className="group flex h-full flex-col rounded-3xl border border-[rgba(55,157,234,0.18)] bg-white p-8 text-left shadow-[0_24px_60px_rgba(14,76,113,0.08)] transition hover:-translate-y-1 hover:border-[rgba(255,195,23,0.34)] hover:shadow-[0_30px_70px_rgba(14,76,113,0.12)]"
+                    >
                         <div>
                             <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(35,171,248,0.14)] text-[var(--brand-navy)]">
                                 <BarChart3 className="h-7 w-7" />
@@ -84,9 +100,9 @@ export default function ToolHubPage() {
 
                         <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-navy)]">
                             Explore Visualization Mode
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                         </div>
-                    </div>
+                    </button>
                 </section>
             </div>
         </div>

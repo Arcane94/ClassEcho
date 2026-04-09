@@ -1,3 +1,4 @@
+// Creates a new observation session and posts the initial sections payload to the backend.
 import { API_BASE_URL } from "../config";
 
 export interface SessionTagInput {
@@ -6,7 +7,7 @@ export interface SessionTagInput {
 }
 
 export interface SessionSectionInput {
-  session_segtor: string;
+  session_sector: string;
   section_name: string;
   tags?: SessionTagInput[];
 }

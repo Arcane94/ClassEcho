@@ -1,5 +1,4 @@
-//File that holds all of the logic for storing teacher/student observations on local storage when their is a network issue with either server or frontend 
-//and sending all observations in one mass send when connection problems are resolved.
+// Offline queue for storing observation events locally until connectivity returns.
 
 
 //Import observation data objects

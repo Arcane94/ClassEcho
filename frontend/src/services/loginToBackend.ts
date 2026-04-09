@@ -1,3 +1,4 @@
+// Sends login credentials to the backend and returns the authenticated user payload.
 import { API_BASE_URL } from "../config";
 import {
   getBackendUnavailableMessage,

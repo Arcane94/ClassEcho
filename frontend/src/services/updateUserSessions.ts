@@ -1,3 +1,4 @@
+// Updates the saved session list for a user when they join or leave sessions.
 import { API_BASE_URL } from "../config";
 
 //Uses a given userId and sessionId to update the sessions array of that user in the database

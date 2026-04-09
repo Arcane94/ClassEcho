@@ -1,3 +1,4 @@
+// Updates the legacy observer list associated with a session.
 import { API_BASE_URL } from "../config";
 
 //Uses a given sessionId and userId to update the observers array of that session in the database

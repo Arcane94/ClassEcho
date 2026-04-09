@@ -3,6 +3,8 @@
 //Retrieve the Teacher Observation Model
 const teacherObservationModel = require('../models/TeacherObservationModel');
 const Session = require('../models/SessionModel');
+const { toEasternMySQLDateTime } = require('../utils/ToSQLDateTime');
+const { describeSessionAccess, normalizeUserId } = require('../utils/sessionAccess');
 const {
   isNumericOnlyEnabled,
   isValidNumericStudentIdValue,
@@ -72,8 +74,8 @@ exports.createTeacherObservation = async (req, res) => {
       note,
       session_id: normalizedSessionId,
       observer_id: normalizedObserverId,
-      start_time: observationStartTime,
-      end_time: observationEndTime,
+      start_time: toEasternMySQLDateTime(observationStartTime),
+      end_time: toEasternMySQLDateTime(observationEndTime),
       student_id: numericOnlyStudentIds ? normalizeNumericStudentIdValue(student_id) : student_id,
       teacher_position,
       selected_tags,
@@ -133,6 +135,21 @@ exports.deleteTeacherObservation = async (req, res) => {
 exports.getObservationsBySessionId = async (req, res) => {
   try { 
     const { session_id } = req.params;
+    const requesterId = normalizeUserId(req.query?.user_id);
+
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing user_id in request.' });
+    }
+
+    const session = await Session.getById(session_id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const access = await describeSessionAccess(session, requesterId);
+    if (!access.permissions.can_export_csv) {
+      return res.status(403).json({ error: 'You do not have access to this session.' });
+    }
 
     const observations = await teacherObservationModel.getBySessionId(session_id);
     
@@ -147,6 +164,33 @@ exports.getObservationsBySessionId = async (req, res) => {
     console.error('Error fetching observations:', err);
     return res.status(500).json({ error: 'Server error' });
   }   
+};
+
+exports.getObservationCountBySessionId = async (req, res) => {
+  try {
+    const { session_id } = req.params;
+    const requesterId = normalizeUserId(req.query?.user_id);
+
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing user_id in request.' });
+    }
+
+    const session = await Session.getById(session_id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const access = await describeSessionAccess(session, requesterId);
+    if (!access.permissions.can_export_csv) {
+      return res.status(403).json({ error: 'You do not have access to this session.' });
+    }
+
+    const count = await teacherObservationModel.countBySessionId(session_id);
+    return res.json({ count });
+  } catch (err) {
+    console.error('Error fetching observation count:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
 };
 
 //Logic to return a single observation given the observations id

@@ -1,3 +1,4 @@
+// Fetches one saved session and normalizes the response shape for the UI.
 import { API_BASE_URL } from "../config";
 
 export interface SessionData {
@@ -10,6 +11,17 @@ export interface SessionData {
     server_time: string;
     join_code: string;
     student_id_numeric_only: boolean;
+    access_role?: "creator" | "viewer" | "viz_editor" | "full_editor" | null;
+    access_role_label?: string | null;
+    is_creator?: boolean;
+    permissions?: {
+      can_view_session: boolean;
+      can_export_csv: boolean;
+      can_edit_visualization: boolean;
+      can_edit_session: boolean;
+      can_delete_session: boolean;
+      can_manage_access: boolean;
+    };
   }
 
   export function normalizeSessionData(data: Record<string, unknown>): SessionData {
@@ -24,13 +36,35 @@ export interface SessionData {
       server_time: String(data.server_time ?? ""),
       join_code: String(data.join_code ?? ""),
       student_id_numeric_only: Boolean(Number(data.student_id_numeric_only ?? 0)),
+      access_role:
+        typeof data.access_role === "string"
+          ? (data.access_role as SessionData["access_role"])
+          : null,
+      access_role_label:
+        typeof data.access_role_label === "string" ? data.access_role_label : null,
+      is_creator: Boolean(data.is_creator),
+      permissions:
+        data.permissions && typeof data.permissions === "object"
+          ? {
+              can_view_session: Boolean((data.permissions as Record<string, unknown>).can_view_session),
+              can_export_csv: Boolean((data.permissions as Record<string, unknown>).can_export_csv),
+              can_edit_visualization: Boolean((data.permissions as Record<string, unknown>).can_edit_visualization),
+              can_edit_session: Boolean((data.permissions as Record<string, unknown>).can_edit_session),
+              can_delete_session: Boolean((data.permissions as Record<string, unknown>).can_delete_session),
+              can_manage_access: Boolean((data.permissions as Record<string, unknown>).can_manage_access),
+            }
+          : undefined,
     } as SessionData;
   }
   
   //Calls server and attempts to retrieve session information using session id
-  export async function fetchSessionById(sessionId: string): Promise<SessionData | null> {
+  export async function fetchSessionById(sessionId: string, userId?: string | number | null): Promise<SessionData | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`);
+      const queryString =
+        userId !== undefined && userId !== null
+          ? `?${new URLSearchParams({ user_id: String(userId) }).toString()}`
+          : "";
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}${queryString}`);
   
       if (!response.ok) {
         //If session could not be found, alert console

@@ -160,6 +160,18 @@ export default function LoginPage() {
                     <p className="login-footer">
                         Don&apos;t have an account? <Link to="/signup" className="login-link">Create one here</Link>
                     </p>
+
+                    <div className="login-legal-footer" aria-label="Legal links">
+                        <Link to="/privacy-policy" className="login-legal-link">
+                            Privacy Policy
+                        </Link>
+                        <span className="login-legal-separator" aria-hidden="true">
+                            /
+                        </span>
+                        <Link to="/terms-of-use" className="login-legal-link">
+                            Terms of Use
+                        </Link>
+                    </div>
                 </section>
             </div>
         </div>

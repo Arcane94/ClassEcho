@@ -1,7 +1,7 @@
 /**
  * Model to create and manage User information in the database
  */
-const db = require('../config/dbConfig.js');
+const { observationDb: db } = require('../db/connections');
 
 const TABLE = 'observer_user';
 
@@ -81,4 +81,53 @@ exports.getByEmail = async function (email) {
     row.edit_sessions = row.edit_sessions ?? "[]";
   }
   return row || null;
+};
+
+function parseSessionIdList(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsedValue = JSON.parse(value);
+      return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+exports.removeSessionReferences = async function removeSessionReferences(session_id, trx = null) {
+  const dbOrTrx = trx || db;
+  const numericSessionId = Number(session_id);
+
+  const users = await dbOrTrx(TABLE)
+    .select('user_id', 'sessions', 'edit_sessions');
+
+  for (const user of users) {
+    const currentSessions = parseSessionIdList(user.sessions);
+    const currentEditSessions = parseSessionIdList(user.edit_sessions);
+
+    const nextSessions = currentSessions
+      .filter((value) => Number(value) !== numericSessionId);
+    const nextEditSessions = currentEditSessions
+      .filter((value) => Number(value) !== numericSessionId);
+
+    const sessionsChanged = nextSessions.length !== currentSessions.length;
+    const editSessionsChanged = nextEditSessions.length !== currentEditSessions.length;
+
+    if (!sessionsChanged && !editSessionsChanged) {
+      continue;
+    }
+
+    await dbOrTrx(TABLE)
+      .where({ user_id: user.user_id })
+      .update({
+        sessions: JSON.stringify(nextSessions),
+        edit_sessions: JSON.stringify(nextEditSessions),
+      });
+  }
 };

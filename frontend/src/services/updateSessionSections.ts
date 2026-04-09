@@ -1,7 +1,8 @@
+// Replaces the session's configured sections and tags with a new set from the editor.
 import { API_BASE_URL } from "../config";
 
 export interface UpdatedSessionSectionInput {
-  session_segtor: string;
+  session_sector: string;
   section_name: string;
   tags: { tag_name: string }[];
 }
@@ -10,6 +11,7 @@ export interface UpdatedSessionSectionInput {
 export async function updateSessionSections(
   sessionId: string | number,
   sections: UpdatedSessionSectionInput[],
+  requesterId?: string | number | null,
 ): Promise<{ success: boolean; error?: string; }> {
   try {
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/sections`, {
@@ -17,7 +19,7 @@ export async function updateSessionSections(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ sections }),
+      body: JSON.stringify({ sections, requester_id: requesterId ?? null }),
     });
 
     if (!response.ok) {

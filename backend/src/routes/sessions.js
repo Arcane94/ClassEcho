@@ -1,5 +1,4 @@
-//Define routes for the Session Model
-//route for POST new session info, route to GET session by....
+// Session routes: expose CRUD, sharing, section, and observer endpoints for saved sessions.
 
 //Basic Setup
 const express = require('express');
@@ -14,6 +13,11 @@ router.get('/check', sessionController.checkSession);
 
 //Get Route to retrieve session information using session id
 router.get('/:id', sessionController.getSessionById);
+
+router.get('/:id/access', sessionController.getSessionAccessList);
+router.post('/:id/access', sessionController.grantSessionAccess);
+router.put('/:id/access/:userId', sessionController.updateSessionAccess);
+router.delete('/:id/access/:userId', sessionController.removeSessionAccess);
 
 //PUT route to update session information using session id
 router.put('/:id', sessionController.updateSessionById);

@@ -1,11 +1,19 @@
+// Fetches student observations for a session and backfills missing observer names when needed.
 import { API_BASE_URL } from "../config";
 import type { StudentObservationData } from "./createStudentObservation";
 import { getUserById } from "./getUserById";
 
 //Calls server and retrieves all student observations for a given session
-export async function getAllStudentObservationsForSession(sessionId: string | number): Promise<StudentObservationData[]> {
+export async function getAllStudentObservationsForSession(
+  sessionId: string | number,
+  userId?: string | number | null,
+): Promise<StudentObservationData[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/observations/student/session/${sessionId}`);
+    const resolvedUserId = userId ?? localStorage.getItem("user_id");
+    const queryString = new URLSearchParams({
+      user_id: String(resolvedUserId ?? ""),
+    });
+    const response = await fetch(`${API_BASE_URL}/observations/student/session/${sessionId}?${queryString.toString()}`);
 
     if (!response.ok) {
       //If session could not be found, alert console

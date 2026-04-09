@@ -1,3 +1,4 @@
+// Deletes a collection of student observations through the backend bulk-delete route.
 import { API_BASE_URL } from "../config";
 
   //Calls the server and sends all the data needed to delete a collection of student observations

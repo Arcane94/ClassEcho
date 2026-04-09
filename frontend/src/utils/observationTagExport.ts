@@ -1,3 +1,4 @@
+// Normalizes observation tag structures into CSV-ready columns.
 type TagSections = Record<string, string[]>;
 
 type ObservationTagCategory = "behavior_tags" | "function_tags" | "structure_tags";

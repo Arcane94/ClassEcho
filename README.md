@@ -1,84 +1,163 @@
-# SnapClass Observation Tool
+# ClassEcho Platform
 
-The SnapClass Observation Tool will be used by observers in classrooms and other learning environments to document the usage of SnapClass by teachers and students.
+ClassEcho is a classroom research platform for capturing what happens during live instruction and then turning those observations into replayable, analyzable session data afterward.
 
-## Project Structure
+It combines two connected workflows:
 
-The repo is now organized so the current observation tool can live beside another React app under one authenticated shell.
+- `Observation Mode`: create sessions, join live observations, define classroom sections/tags, and record teacher and student observation logs in real time.
+- `Visualization Mode`: define replay windows and seating charts, replay session activity, review filtered logs, inspect 
+cumulative patterns, and optionally view student Snap! code history when [SnapClass](https://lin-class17.csc.ncsu.edu/snapclass/) data (See what is SnapClass section) is connected.
+
+In practice, ClassEcho supports the full cycle of classroom research work:
+
+- Session setup and observer coordination
+- Structured teacher and student observation logging
+- Replay windows and seating-chart configuration
+- Observation logs playback
+- Cumulative summaries and pattern inspection
+- View student code snapshots 
+
+## What Is SnapClass?
+
+SnapClass is a classroom management platform for Snap!.
+
+It adds classroom-facing features around Snap!, including:
+
+- Teacher tools for managing classrooms and assignments
+- Easier save/load flows for student projects
+- Project version history
+- Emoji reactions while students are coding to report affect
+- Project sharing and collaboration features for classmates
+
+ClassEcho reads student coding data from the SnapClass database to power the `student code view` inside Visualization Mode.
+
+If you do not want to use SnapClass, ClassEcho still works for:
+
+- all of Observation Mode
+- replay windows and seating charts in Visualization Mode
+- log playback, filtering, and cumulative views
+
+Without SnapClass, the only feature you lose is the `student code view` in Visualization Mode.
+
+## Repository Layout
 
 ```text
 frontend/
   src/
-    app/                    # App shell and router
+    app/                            # app shell + routing
     features/
-      auth/                 # Login, signup, password reset pages
-      observation-tool/     # Observation tool pages/components
-      workspace/            # Post-login app hub
-    components/             # Shared UI components
-    services/               # Shared API/service layer
-    utils/                  # Shared utilities/export helpers
-    assets/                 # Shared images/styles
+      auth/                         # login/signup/password reset
+      workspace/                    # post-login tool hub
+      observation-mode/             # observation mode pages/components
+      visualization-mode/           # setup + replay + analytics UI
 backend/
   src/
-    app.js                  # Express app setup
-    server.js               # Server bootstrap
-    config/                 # Local app config + db config
+    app.js                          # express app
+    server.js                       # server bootstrap
+    config/appConfig.js             # backend runtime config
+    db/connections.js               # DB connection setup
     controllers/
     models/
     routes/
     utils/
-  database/
-    observer_tool_sql.sql
+  runtime/isnap/                    # local Snap runtime assets used by code viewer
+  database/classecho.sql            # schema
 ```
 
-## Frontend Startup & Usage
-Steps to run frontend on your own machine:
+## Prerequisites
 
-1. Navigate into frontend folder
-```bash
-cd frontend
-```
-2. Download needed libraries.
-```bash
-npm install
-```
-3. Start Frontend
-```bash
-npm run dev
-```
-4. Login is still the landing page, and successful login now routes to an app hub at `/apps` before entering the observation tool.
+- Node.js `22.x` (project currently runs on `v22.17.1`)
+- npm `10+`
+- MySQL
 
-## Server Usage
-Steps to run server on your own machine:
+## Database Setup
 
-1. Ensure Node.js and npm are installed on your device.
+1. Create a MySQL database for ClassEcho session and observation data.
+2. Import [classecho.sql](backend/database/classecho.sql) into that database.
+3. If you want to self-host student code logs we included the SnapClass database structure as an example in 
+[snapclass.sql](backend/database/snapclass.sql).
 
-2. Navigate into backend folder
+If you are not using SnapClass, you can still use the rest of ClassEcho normally. Only the student code view depends on SnapClass data.
+
+
+## Backend Configuration
+
+Backend config lives in [appConfig.js](backend/src/config/appConfig.js).  
+All fields are env-driven with defaults.
+
+Primary env variables:
+
+- `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_PORT`
+- `OBSERVATION_DB_NAME`
+- `VISUALIZATION_DB_NAME`
+- `VISUALIZATION_DB_USER_TABLE`
+- `VISUALIZATION_DB_TRACE_TABLE`
+- `VISUALIZATION_DB_EMOJI_TABLE`
+- `SERVER_PORT` (or `PORT`)
+- `EMAIL_SERVICE`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
+- `EMAIL_USER`, `EMAIL_APP_PASSWORD`, `EMAIL_FROM`
+
+## Frontend API Base URL
+
+Frontend currently reads API base from [index.ts](frontend/src/config/index.ts).
+
+- Local dev example: `http://localhost:3011`
+- Production: set this to your deployed backend URL (or `/api` behind reverse proxy)
+
+## Run Locally
+
+### Backend
+
 ```bash
 cd backend
-```
-3. Download needed libraries.
-```bash
 npm install
+npm run start
 ```
-4. Copy `backend/src/config/appConfig.template.js` to `backend/src/config/appConfig.js`
-5. Update `backend/src/config/appConfig.js` with your machine's MySQL and email information to use the database
-6. Start server
+
+### Frontend
+
 ```bash
-//Simple startup
-node src/server.js
-```
-```bash
-//Nodemon startup (development startup that updates server automatically when saved)
+cd frontend
+npm install
 npm run dev
 ```
 
-## Root Scripts
+Login routes to `/apps`, where users can open Observation Mode or Visualization Mode.
 
-You can also run the existing package scripts from the repository root:
+## Root Convenience Scripts
+
+From repo root:
 
 ```bash
 npm run frontend:dev
 npm run frontend:build
 npm run backend:dev
+npm run backend:start
 ```
+
+## Citation
+
+If you use ClassEcho in your research, please cite:
+
+Limke, A., Rajapaksha, Y., Reed, E., Hill, M., Lytle, N., Cateté, V., & Barnes, T. (2026).
+*ClassEcho: A Tool for Observing, Visualizing, and Analyzing Student-Teacher Interactions in K-12 Computing Classrooms.*
+Extended Abstracts of the CHI Conference on Human Factors in Computing Systems.
+https://doi.org/10.1145/3772363.3798572
+
+```bibtex
+@inproceedings{limke2026classecho,
+  title={ClassEcho: A Tool for Observing, Visualizing, and Analyzing Student-Teacher Interactions in K-12 Computing Classrooms},
+  author={Limke, Ally and Rajapaksha, Yasitha and Reed, Eli and Hill, Marnie and Lytle, Nicholas and Cateté, Veronica and Barnes, Tiffany},
+  booktitle={Extended Abstracts of the CHI Conference on Human Factors in Computing Systems},
+  year={2026},
+  pages={1--7},
+  doi={10.1145/3772363.3798572}
+}
+```
+
+## Production Deployment
+
+1. Build frontend: `npm --prefix frontend run build`.
+2. Deploy backend (`backend/src`, `backend/runtime/isnap`, `backend/package*.json`) and start it with `npm run start` (prefer `pm2`/`systemd` in production).
+3. Serve `frontend/dist` with Nginx (or similar static server).
+4. Reverse-proxy API traffic to backend port (`SERVER_PORT`) and set required env vars.

@@ -1,3 +1,4 @@
+// Builds the student observation payload shape used by the create and export flows.
 import type { ObservationRecordingFlag } from "../utils/observationLogging";
 import { API_BASE_URL } from "../config";
 

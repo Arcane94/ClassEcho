@@ -1,8 +1,10 @@
+// Deletes a session after the backend verifies the requester is the session creator.
 import { API_BASE_URL } from "../config";
 
 //Uses a given sessionId to delete a session in the database
 export async function deleteSession(
   sessionId: string | number,
+  requesterId?: string | number | null,
 ): Promise<{ success: boolean; error?: string; }> {
   try {
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
@@ -10,6 +12,9 @@ export async function deleteSession(
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        requester_id: requesterId ?? null,
+      }),
     });
 
     if (!response.ok) {

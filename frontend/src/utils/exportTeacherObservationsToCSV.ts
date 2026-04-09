@@ -1,32 +1,40 @@
+// Serializes teacher observations for one session into a downloadable CSV file.
+// Serializes teacher observations for one session into a downloadable CSV file.
 import { getAllTeacherObservationsForSession } from "../services/getAllTeacherObservationsForSession";
 import type { TeacherObservationData } from "../services/createTeacherObservation";
 import { escapeCsvCell, getTeacherTagCsvColumns } from "./observationTagExport";
 
 //Exports teacher observations for a session to a CSV file
-export async function exportTeacherObservationsToCSV(sessionId: string | number): Promise<void> {
+export async function exportTeacherObservationsToCSV(
+  sessionId: string | number,
+  userId?: string | number | null,
+): Promise<{ success: boolean; hasData: boolean; }> {
   try {
     //Fetch all teacher observations for the session
-    const observations = await getAllTeacherObservationsForSession(sessionId);
+    const observations = await getAllTeacherObservationsForSession(sessionId, userId);
 
     if (observations.length === 0) {
       console.warn("No teacher observations found for this session");
-      return;
+      return {
+        success: true,
+        hasData: false,
+      };
     }
 
     //Define CSV headers
     const headers = [
-      "Session ID",
-      "Observer ID",
-      "Observer Name",
-      "Student ID",
-      "Teacher Position",
-      "Start Time",
-      "End Time",
+      "session_id",
+      "observer_id",
+      "observer_name",
+      "student_id",
+      "teacher_position",
+      "start_time",
+      "end_time",
       "behavior_tags",
       "function_tags",
       "structure_tags",
-      "Note",
-      "Recording"
+      "note",
+      "recording"
     ];
 
     //Convert observations to CSV rows
@@ -68,7 +76,16 @@ export async function exportTeacherObservationsToCSV(sessionId: string | number)
     link.click();
     document.body.removeChild(link);
 
+    return {
+      success: true,
+      hasData: true,
+    };
+
   } catch (error) {
     console.error("Error exporting teacher observations to CSV:", error);
+    return {
+      success: false,
+      hasData: false,
+    };
   }
 }

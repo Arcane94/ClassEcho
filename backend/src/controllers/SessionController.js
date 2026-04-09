@@ -4,9 +4,72 @@
 const Session = require(`../models/SessionModel`);
 const SessionSection = require(`../models/SessionSectionModel`);
 const SectionTag = require(`../models/SectionTagModel`);
-const db = require('../config/dbConfig');
+const SessionAccess = require('../models/SessionAccessModel');
+const StudentObservation = require('../models/StudentObservationModel');
+const TeacherObservation = require('../models/TeacherObservationModel');
+const User = require('../models/UserModel');
+const { observationDb: db } = require('../db/connections');
 //Datetime conversion function
 const { toMySQLDateTime } = require('../utils/ToSQLDateTime');
+const {
+  describeSessionAccess,
+  normalizeUserId,
+  serializeSessionForUser,
+} = require('../utils/sessionAccess');
+
+function parseRequesterId(req) {
+  return (
+    normalizeUserId(req.body?.requester_id)
+    ?? normalizeUserId(req.body?.user_id)
+    ?? normalizeUserId(req.query?.user_id)
+  );
+}
+
+async function findUserByIdentifier(identifier) {
+  const normalizedIdentifier = String(identifier ?? '').trim();
+  if (!normalizedIdentifier) {
+    return null;
+  }
+
+  let user = await User.getByUsername(normalizedIdentifier);
+  if (!user) {
+    user = await User.getByEmail(normalizedIdentifier);
+  }
+
+  return user;
+}
+
+async function getSessionAccessListPayload(session) {
+  const [owner, sharedUsers] = await Promise.all([
+    User.getByUserId(session.creator),
+    SessionAccess.listBySessionId(session.session_id),
+  ]);
+
+  return {
+    session_id: session.session_id,
+    owner: owner
+      ? {
+        user_id: owner.user_id,
+        username: owner.username,
+        email: owner.email,
+      }
+      : {
+        user_id: Number(session.creator),
+        username: null,
+        email: null,
+      },
+    shared_users: sharedUsers.map((entry) => ({
+      session_user_access_id: entry.session_user_access_id,
+      user_id: entry.user_id,
+      username: entry.username,
+      email: entry.email,
+      role: entry.role,
+      granted_by: entry.granted_by,
+      granted_by_username: entry.granted_by_username ?? null,
+      granted_at: entry.granted_at,
+    })),
+  };
+}
 
 //Logic to create a new Session entry in database
 //POST /sessions
@@ -60,9 +123,10 @@ exports.createSession = async (req, res) => {
           const createdSections = [];
           if (Array.isArray(sections)) {
             for (const section of sections) {
+              const sessionSector = section.session_sector ?? section.session_segtor;
               const section_id = await SessionSection.create({
                 session_id,
-                session_segtor: section.session_segtor,
+                session_sector: sessionSector,
                 section_name: section.section_name,
               }, trx);
 
@@ -109,13 +173,25 @@ exports.getSessionById = async (req, res) => {
   
       //Logic to retrieve session from database using id
       const session = await Session.getById(id);
-      console.log(session);
       //Return a 404 error if session cannot be found
       if (!session) {
         return res.status(404).json({ error: 'Session not found' });
       }
-  
-      return res.json(session);
+
+      const requesterId = normalizeUserId(req.query?.user_id);
+      if (requesterId !== null) {
+        const access = await describeSessionAccess(session, requesterId);
+        if (!access.permissions.can_view_session) {
+          return res.status(403).json({ error: 'You do not have access to this session.' });
+        }
+
+        return res.json(serializeSessionForUser(session, access));
+      }
+
+      return res.json({
+        ...session,
+        lesson_name: session.session_name,
+      });
     } catch (err) {
       console.error('Error fetching session:', err);
       return res.status(500).json({ error: 'Server error' });
@@ -138,6 +214,16 @@ exports.updateSessionById = async (req, res) => {
     const session = await Session.getById(id);
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const requesterId = parseRequesterId(req);
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing requester_id in request.' });
+    }
+
+    const access = await describeSessionAccess(session, requesterId);
+    if (!access.permissions.can_edit_session) {
+      return res.status(403).json({ error: 'You do not have permission to edit this session.' });
     }
 
     const updatedInfo = {
@@ -201,6 +287,18 @@ exports.getSessionByJoinCode = async (req, res) => {
 exports.getSessionSections = async (req, res) => {
   try {
     const { id } = req.params;
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const requesterId = normalizeUserId(req.query?.user_id);
+    if (requesterId !== null) {
+      const access = await describeSessionAccess(session, requesterId);
+      if (!access.permissions.can_view_session) {
+        return res.status(403).json({ error: 'You do not have access to this session.' });
+      }
+    }
 
     const sections = await SessionSection.getAllSectionsBySessionId(id);
 
@@ -209,7 +307,7 @@ exports.getSessionSections = async (req, res) => {
         const tags = await SectionTag.getBySection(section.section_id);
         return {
           section_id: section.section_id,
-          session_segtor: section.session_segtor,
+          session_sector: section.session_sector,
           section_name: section.section_name,
           tags: tags.map(tag => tag.tag_name)
         };
@@ -239,19 +337,30 @@ exports.updateSessionSections = async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
 
+    const requesterId = parseRequesterId(req);
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing requester_id in request.' });
+    }
+
+    const access = await describeSessionAccess(session, requesterId);
+    if (!access.permissions.can_edit_session) {
+      return res.status(403).json({ error: 'You do not have permission to edit this session.' });
+    }
+
     const result = await db.transaction(async (trx) => {
       await SessionSection.deleteBySessionId(id, trx);
 
       const createdSections = [];
 
       for (const section of sections) {
-        if (!section || !section.session_segtor || !section.section_name) {
+        const sessionSector = section?.session_sector ?? section?.session_segtor;
+        if (!section || !sessionSector || !section.section_name) {
           continue;
         }
 
         const section_id = await SessionSection.create({
           session_id: id,
-          session_segtor: section.session_segtor,
+          session_sector: sessionSector,
           section_name: section.section_name,
         }, trx);
 
@@ -274,7 +383,7 @@ exports.updateSessionSections = async (req, res) => {
 
         createdSections.push({
           section_id,
-          session_segtor: section.session_segtor,
+          session_sector: sessionSector,
           section_name: section.section_name,
           tags: createdTags,
         });
@@ -346,7 +455,27 @@ exports.deleteSessionById = async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const deletedRows = await Session.deleteBySessionId(id);
+    const requesterId = parseRequesterId(req);
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing requester_id in request.' });
+    }
+
+    const access = await describeSessionAccess(session, requesterId);
+    if (!access.permissions.can_delete_session) {
+      return res.status(403).json({ error: 'Only the session creator can delete this session.' });
+    }
+
+    const deletedRows = await db.transaction(async (trx) => {
+      await TeacherObservation.deleteBySessionId(id, trx);
+      await StudentObservation.deleteBySessionId(id, trx);
+      await SessionAccess.deleteBySessionId(id, trx);
+      await trx('session_dates').where({ session_id: id }).del();
+      await SessionSection.deleteBySessionId(id, trx);
+      await User.removeSessionReferences(id, trx);
+
+      return Session.deleteBySessionId(id, trx);
+    });
+
     if (deletedRows != 1) {
       return res.status(500).json({ error: 'Failed to delete session' });
     }
@@ -354,6 +483,186 @@ exports.deleteSessionById = async (req, res) => {
     return res.json({ message: 'Session deleted successfully' });
   } catch (err) {
     console.error('Error deleting session:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.getSessionAccessList = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requesterId = normalizeUserId(req.query?.user_id);
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing user_id in request.' });
+    }
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const access = await describeSessionAccess(session, requesterId);
+    if (!access.permissions.can_manage_access) {
+      return res.status(403).json({ error: 'Only the session creator can manage sharing.' });
+    }
+
+    return res.json(await getSessionAccessListPayload(session));
+  } catch (error) {
+    console.error('Error fetching session access list:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.grantSessionAccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requesterId = parseRequesterId(req);
+    const role = String(req.body?.role ?? '').trim();
+    const identifier = String(req.body?.identifier ?? '').trim();
+
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing requester_id in request.' });
+    }
+
+    if (!SessionAccess.isValidRole(role)) {
+      return res.status(400).json({ error: 'Invalid access role.' });
+    }
+
+    if (!identifier) {
+      return res.status(400).json({ error: 'Enter a username or email to share this session.' });
+    }
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const requesterAccess = await describeSessionAccess(session, requesterId);
+    if (!requesterAccess.permissions.can_manage_access) {
+      return res.status(403).json({ error: 'Only the session creator can manage sharing.' });
+    }
+
+    const user = await findUserByIdentifier(identifier);
+    if (!user) {
+      return res.status(404).json({ error: 'No user was found with that username or email.' });
+    }
+
+    const targetUserId = normalizeUserId(user.user_id);
+    if (targetUserId === null) {
+      return res.status(400).json({ error: 'Invalid shared user.' });
+    }
+
+    if (Number(session.creator) === targetUserId) {
+      return res.status(400).json({ error: 'The session creator already has full access.' });
+    }
+
+    await SessionAccess.upsert({
+      session_id: Number(id),
+      user_id: targetUserId,
+      role,
+      granted_by: requesterId,
+    });
+
+    return res.json({
+      message: 'Session access updated successfully.',
+      ...(await getSessionAccessListPayload(session)),
+    });
+  } catch (error) {
+    console.error('Error granting session access:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.updateSessionAccess = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const requesterId = parseRequesterId(req);
+    const role = String(req.body?.role ?? '').trim();
+    const targetUserId = normalizeUserId(userId);
+
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing requester_id in request.' });
+    }
+
+    if (targetUserId === null) {
+      return res.status(400).json({ error: 'Invalid target user.' });
+    }
+
+    if (!SessionAccess.isValidRole(role)) {
+      return res.status(400).json({ error: 'Invalid access role.' });
+    }
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const requesterAccess = await describeSessionAccess(session, requesterId);
+    if (!requesterAccess.permissions.can_manage_access) {
+      return res.status(403).json({ error: 'Only the session creator can manage sharing.' });
+    }
+
+    if (Number(session.creator) === targetUserId) {
+      return res.status(400).json({ error: 'The session creator access level cannot be changed.' });
+    }
+
+    const existingAccess = await SessionAccess.getBySessionIdAndUserId(Number(id), targetUserId);
+    if (!existingAccess) {
+      return res.status(404).json({ error: 'This user does not currently have shared access.' });
+    }
+
+    await SessionAccess.upsert({
+      session_id: Number(id),
+      user_id: targetUserId,
+      role,
+      granted_by: requesterId,
+    });
+
+    return res.json({
+      message: 'Session access updated successfully.',
+      ...(await getSessionAccessListPayload(session)),
+    });
+  } catch (error) {
+    console.error('Error updating session access:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.removeSessionAccess = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const requesterId = parseRequesterId(req);
+    const targetUserId = normalizeUserId(userId);
+
+    if (requesterId === null) {
+      return res.status(400).json({ error: 'Missing requester_id in request.' });
+    }
+
+    if (targetUserId === null) {
+      return res.status(400).json({ error: 'Invalid target user.' });
+    }
+
+    const session = await Session.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const requesterAccess = await describeSessionAccess(session, requesterId);
+    if (!requesterAccess.permissions.can_manage_access) {
+      return res.status(403).json({ error: 'Only the session creator can manage sharing.' });
+    }
+
+    if (Number(session.creator) === targetUserId) {
+      return res.status(400).json({ error: 'The session creator access cannot be removed.' });
+    }
+
+    await SessionAccess.deleteBySessionIdAndUserId(Number(id), targetUserId);
+
+    return res.json({
+      message: 'Session access removed successfully.',
+      ...(await getSessionAccessListPayload(session)),
+    });
+  } catch (error) {
+    console.error('Error removing session access:', error);
     return res.status(500).json({ error: 'Server error' });
   }
 };

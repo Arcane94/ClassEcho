@@ -1,3 +1,4 @@
+// Formats an ISO timestamp into the month/day plus 12-hour time string used in the UI.
 export function formatToMonthDayHourMinute(isoString?: string): string {
   if (!isoString) return 'Invalid time';
 

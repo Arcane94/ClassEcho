@@ -1,3 +1,4 @@
+// Reusable date input field used across observation and session forms.
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 

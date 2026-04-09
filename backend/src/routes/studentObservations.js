@@ -1,5 +1,4 @@
-//Define routes for the StudentObservations Model
-//POST for new student observations....
+// Student observation routes: create, delete, and fetch student logs for a session.
 
 //Basic Setup
 const express = require('express');
@@ -10,6 +9,8 @@ const studentController = require('../controllers/StudentObservationController.j
 router.post('/', studentController.createStudentObservation);
 //Post route to delete a new student observation
 router.post('/delete', studentController.deleteStudentObservation);
+//Get observation count for a session
+router.get('/session/:session_id/count', studentController.getObservationCountBySessionId);
 //Get all observations for a session
 router.get('/session/:session_id', studentController.getObservationsBySessionId);
 //Get a single observation by id

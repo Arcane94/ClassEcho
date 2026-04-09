@@ -1,3 +1,4 @@
+// Requests a password reset code for the account recovery flow.
 import { API_BASE_URL } from "../config";
 import {
   getBackendUnavailableMessage,

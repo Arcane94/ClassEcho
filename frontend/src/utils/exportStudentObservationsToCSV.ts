@@ -1,33 +1,41 @@
+// Serializes student observations for one session into a downloadable CSV file.
+// Serializes student observations for one session into a downloadable CSV file.
 import { getAllStudentObservationsForSession } from "../services/getAllStudentObservationsForSession";
 import type { StudentObservationData } from "../services/createStudentObservation";
 import { escapeCsvCell, getStudentTagCsvColumns } from "./observationTagExport";
 
 //Exports student observations for a session to a CSV file
-export async function exportStudentObservationsToCSV(sessionId: string | number): Promise<void> {
+export async function exportStudentObservationsToCSV(
+  sessionId: string | number,
+  userId?: string | number | null,
+): Promise<{ success: boolean; hasData: boolean; }> {
   try {
     //Fetch all student observations for the session
-    const observations = await getAllStudentObservationsForSession(sessionId);
+    const observations = await getAllStudentObservationsForSession(sessionId, userId);
 
     if (observations.length === 0) {
       console.warn("No student observations found for this session");
-      return;
+      return {
+        success: true,
+        hasData: false,
+      };
     }
 
     //Define CSV headers
     const headers = [
-      "Session ID",
-      "Observer ID",
-      "Observer Name",
-      "Student ID",
-      "On Task",
-      "Start Time",
-      "End Time",
+      "session_id",
+      "observer_id",
+      "observer_name",
+      "student_id",
+      "on_task",
+      "start_time",
+      "end_time",
       "behavior_tags",
       "function_tags",
       "structure_tags",
-      "Affect",
-      "Note",
-      "Recording"
+      "affect",
+      "note",
+      "recording"
     ];
 
     //Convert observations to CSV rows
@@ -70,7 +78,16 @@ export async function exportStudentObservationsToCSV(sessionId: string | number)
     link.click();
     document.body.removeChild(link);
 
+    return {
+      success: true,
+      hasData: true,
+    };
+
   } catch (error) {
     console.error("Error exporting student observations to CSV:", error);
+    return {
+      success: false,
+      hasData: false,
+    };
   }
 }

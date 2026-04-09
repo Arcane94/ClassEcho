@@ -1,3 +1,4 @@
+// Looks up a session by join code for the join-session workflow.
 import { API_BASE_URL } from "../config";
 
 export interface SessionInfo {

@@ -1,7 +1,7 @@
 /** 
  * Create Model for Section-Tag information, model should use the section id to connect to the unique section
 */
-const db = require('../config/dbConfig.js');
+const { observationDb: db } = require('../db/connections');
 
 const TABLE = 'section_tag';
     
