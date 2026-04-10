@@ -60,3 +60,9 @@ temp/
 *.dump
 *.csv
 
+# Config files
+backend/runtime/isnap/logging/config.js
+backend/runtime/isnap/logging/config.php
+backend/runtime/isnap/snap-patch/logging/config.js
+backend/src/config/appConfig.js
+
