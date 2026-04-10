@@ -26,31 +26,19 @@ export interface TeacherObservationData {
   
   //Calls the server and sends all the data needed to create a new teacher observation
   export async function createTeacherObservation(data: TeacherObservationData, options: CreateTeacherObservationOptions = {}) {
-    if (data.single_click) {
-      console.log(`[${new Date().toISOString()}] Creating new single tag Teacher observation: ${JSON.stringify(data)}`);
-    } else {
-      console.log(`[${new Date().toISOString()}] Creating new whole Teacher observation: ${JSON.stringify(data)}`);
+    const response = await fetch(`${API_BASE_URL}/observations/teacher`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: options.signal,
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create teacher observation');
     }
-    try {
-      const response = await fetch(`${API_BASE_URL}/observations/teacher`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: options.signal,
-        body: JSON.stringify(data),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Failed to create teacher observation');
-      }
-  
-      const result = await response.json();
-      console.log(`[${new Date().toISOString()}] Observation Created`);
-      return result;
-    } catch (err) {
-      console.error('Error creating teacher observation:', err);
-      throw err;
-    }
+
+    return response.json();
   }
   
