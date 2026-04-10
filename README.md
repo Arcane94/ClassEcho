@@ -39,6 +39,10 @@ If you do not want to use SnapClass, ClassEcho still works for:
 
 Without SnapClass, the only feature you lose is the `student code view` in Visualization Mode.
 
+## Third-Party Attribution
+
+ClassEcho includes a local copy of [iSnap](https://github.com/thomaswp/iSnap) in [backend/runtime/isnap](backend/runtime/isnap). We use it to serve the Snap-based runtime/viewer that renders SnapClass student code snapshots inside Visualization Mode. The bundled `isnap` runtime is licensed under the GNU Affero General Public License v3.0; see [backend/runtime/isnap/LICENSE](backend/runtime/isnap/LICENSE).
+
 ## Repository Layout
 
 ```text
@@ -82,7 +86,7 @@ If you are not using SnapClass, you can still use the rest of ClassEcho normally
 
 ## Backend Configuration
 
-Backend config lives in [appConfig.js](backend/src/config/appConfig.js).  
+Backend config should live in [appConfig.js](backend/src/config/appConfig.template.js).  
 All fields are env-driven with defaults.
 
 Primary env variables:
