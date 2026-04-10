@@ -22,9 +22,13 @@ export interface StudentObservationData {
     //New tag sent only to controller in server to loosen error-checking for single click observations
     single_click?: boolean; 
   }
+
+  type CreateStudentObservationOptions = {
+    signal?: AbortSignal;
+  };
   
   //Calls the server and sends all the data needed to create a new student observation
-  export async function createStudentObservation(data: StudentObservationData) {
+  export async function createStudentObservation(data: StudentObservationData, options: CreateStudentObservationOptions = {}) {
     if (data.single_click) {
       console.log(`[${new Date().toISOString()}] Creating new single tag Student observation: ${JSON.stringify(data)}`);
     } else {
@@ -36,6 +40,7 @@ export interface StudentObservationData {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: options.signal,
         body: JSON.stringify(data),
       });
   

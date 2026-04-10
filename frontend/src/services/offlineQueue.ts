@@ -19,12 +19,20 @@ const STUDENT_KEY = "pendingStudentObservations";
 const TEACHER_KEY = "pendingTeacherObservations";
 const MAX_FAILED_ATTEMPTS = 3;
 const FLUSH_INTERVAL_MS = 15000;
+const CONNECTIVITY_CHECK_TIMEOUT_MS = 5000;
+const OBSERVATION_SEND_TIMEOUT_MS = 10000;
 let activeFlushPromise: Promise<boolean> | null = null;
 let syncRegistrationCount = 0;
 let syncIntervalId: number | null = null;
 
 function triggerOfflineQueueFlush() {
     void offlineLogging();
+}
+
+function handleOfflineQueueVisibilityChange() {
+    if (document.visibilityState === "visible") {
+        triggerOfflineQueueFlush();
+    }
 }
 
 function attachOfflineQueueSync() {
@@ -34,6 +42,8 @@ function attachOfflineQueueSync() {
 
     if (syncRegistrationCount === 0) {
         window.addEventListener("online", triggerOfflineQueueFlush);
+        window.addEventListener("focus", triggerOfflineQueueFlush);
+        document.addEventListener("visibilitychange", handleOfflineQueueVisibilityChange);
         syncIntervalId = window.setInterval(triggerOfflineQueueFlush, FLUSH_INTERVAL_MS);
         triggerOfflineQueueFlush();
     }
@@ -53,6 +63,8 @@ function detachOfflineQueueSync() {
     }
 
     window.removeEventListener("online", triggerOfflineQueueFlush);
+    window.removeEventListener("focus", triggerOfflineQueueFlush);
+    document.removeEventListener("visibilitychange", handleOfflineQueueVisibilityChange);
 
     if (syncIntervalId !== null) {
         window.clearInterval(syncIntervalId);
@@ -119,6 +131,54 @@ function removeQueueMetadata(observation: QueuedObservation): StudentObservation
     return payload as StudentObservationData | TeacherObservationData;
 }
 
+function isAbortLikeError(error: unknown) {
+    return error instanceof DOMException && error.name === "AbortError";
+}
+
+function isTransientQueueError(error: unknown) {
+    if (isAbortLikeError(error)) {
+        return true;
+    }
+
+    if (error instanceof TypeError) {
+        return true;
+    }
+
+    if (!(error instanceof Error)) {
+        return false;
+    }
+
+    const message = error.message.toLowerCase();
+    return message.includes("network")
+        || message.includes("failed to fetch")
+        || message.includes("load failed")
+        || message.includes("timeout");
+}
+
+async function runWithTimeout<T>(
+    action: (signal: AbortSignal) => Promise<T>,
+    timeoutMs: number,
+): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await action(controller.signal);
+    } finally {
+        window.clearTimeout(timeoutId);
+    }
+}
+
+async function sendQueuedObservation(storageKey: string, payload: StudentObservationData | TeacherObservationData) {
+    return runWithTimeout(async (signal) => {
+        if (storageKey === STUDENT_KEY) {
+            return createStudentObservation(payload as StudentObservationData, { signal });
+        }
+
+        return createTeacherObservation(payload as TeacherObservationData, { signal });
+    }, OBSERVATION_SEND_TIMEOUT_MS);
+}
+
 export function storeObservationLocally(observationData: (StudentObservationData | TeacherObservationData)) {
     try {
         //Determine which type of observation this is, use studentId field since only studentObservations contain this
@@ -170,11 +230,7 @@ async function sendAllObservationsByKey(storageKey: string) {
 
         try {
             //Send first observation to server
-            if (storageKey === STUDENT_KEY) {
-                await createStudentObservation(payload as StudentObservationData);
-              } else {
-                await createTeacherObservation(payload as TeacherObservationData);
-              }
+            await sendQueuedObservation(storageKey, payload);
 
             const latestQueue = readQueuedObservations(storageKey);
             writeQueuedObservations(
@@ -183,6 +239,14 @@ async function sendAllObservationsByKey(storageKey: string) {
             );
         } catch (error) {
             allSent = false;
+            if (isTransientQueueError(error)) {
+                console.warn("Deferred queued observation flush until connectivity stabilizes.", {
+                    storageKey,
+                    error,
+                });
+                return false;
+            }
+
             const latestQueue = readQueuedObservations(storageKey);
             const matchingIndex = latestQueue.findIndex(
                 (queuedObservation) => queuedObservation.queue_id === observation.queue_id,
@@ -231,9 +295,21 @@ export async function offlineLogging() {
             if (!pendingLogs) return true; // Nothing to send
             //Check if both user and server is online and try to send logs if they are
             const userOnline = isUserOnline();
-            const serverOnline = await isServerOnline();
+            if (!userOnline) return false;
 
-            if (!userOnline || !serverOnline) return false;
+            const serverOnline = await runWithTimeout(
+                (signal) => isServerOnline({ signal }),
+                CONNECTIVITY_CHECK_TIMEOUT_MS,
+            ).catch((error) => {
+                if (!isTransientQueueError(error)) {
+                    throw error;
+                }
+
+                console.warn("Skipping offline queue flush because the backend is still unreachable.", error);
+                return false;
+            });
+
+            if (!serverOnline) return false;
 
             const studentResult = await sendAllObservationsByKey(STUDENT_KEY);
             const teacherResult = await sendAllObservationsByKey(TEACHER_KEY);

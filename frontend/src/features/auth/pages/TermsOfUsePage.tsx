@@ -27,7 +27,7 @@ const sections = [
         title: "Observation and Uploaded Data",
         paragraphs: [
             "You are responsible for ensuring that any classroom observations, uploads, and related data entered into ClassEcho are collected and used in compliance with applicable policies, approvals, and laws.",
-            "If you connect SnapClass data, you are responsible for having the right to access and use that SnapClass deployment and its stored classroom data.",
+            "If you connect SnapClass data, you are responsible for obtaining and maintaining the right to access and use SnapClass and its stored classroom data.",
         ],
     },
     {
