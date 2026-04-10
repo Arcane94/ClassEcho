@@ -139,6 +139,14 @@ npm run backend:dev
 npm run backend:start
 ```
 
+## Production Deployment
+
+1. Build frontend: `npm --prefix frontend run build`.
+2. Deploy backend (`backend/src`, `backend/runtime/isnap`, `backend/package*.json`) and start it with `npm run start` (prefer `pm2`/`systemd` in production).
+3. Serve `frontend/dist` with Nginx (or similar static server).
+4. Reverse-proxy API traffic to backend port (`SERVER_PORT`) and set required env vars.
+
+
 ## Citation
 
 If you use ClassEcho in your research, please cite:
@@ -159,9 +167,14 @@ https://doi.org/10.1145/3772363.3798572
 }
 ```
 
-## Production Deployment
+## Contact Us
 
-1. Build frontend: `npm --prefix frontend run build`.
-2. Deploy backend (`backend/src`, `backend/runtime/isnap`, `backend/package*.json`) and start it with `npm run start` (prefer `pm2`/`systemd` in production).
-3. Serve `frontend/dist` with Nginx (or similar static server).
-4. Reverse-proxy API traffic to backend port (`SERVER_PORT`) and set required env vars.
+For questions about ClassEcho, please contact:
+
+- Game2Learn Lab — `game2learnlab@ncsu.edu`
+
+or the researchers in charge
+
+- Dr. Ally Limke — `anlimke@ncsu.edu`
+- Yasitha Rajapaksha — `yrajapa@ncsu.edu`
+
