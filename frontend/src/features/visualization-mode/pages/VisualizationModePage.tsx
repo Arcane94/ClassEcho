@@ -162,7 +162,7 @@ export default function VisualizationModePage() {
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [period, setPeriod] = useState<string | null>(null);
-  const [isnapPrefix, setIsnapPrefix] = useState("G2L");
+  const [isnapPrefix, setIsnapPrefix] = useState("");
 
   const [slider, setSlider] = useState(0);
   const [sliderMax, setSliderMax] = useState(1);
@@ -487,6 +487,14 @@ export default function VisualizationModePage() {
     if (!groups || !selectedDate || !period || selectedDate === ALL_DATES) return null;
     return groups[`${selectedDate} | ${period}`] ?? null;
   }, [groups, selectedDate, period]);
+
+  useEffect(() => {
+    if (!selectedSessionId || !current) {
+      return;
+    }
+
+    setIsnapPrefix(current.student_id_prefix ?? "");
+  }, [current, selectedSessionId]);
 
   const refreshCodeUrls = useCallback(async () => {
     if (!selectedSessionId || !current?.t0 || !current?.t1) {

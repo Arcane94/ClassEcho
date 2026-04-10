@@ -1,5 +1,5 @@
 // Workspace landing page that acts as the app's tool chooser.
-import { ArrowRight, BarChart3, LogOut, Microscope, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BarChart3, Link2, LogOut, Microscope, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function ToolHubPage() {
@@ -54,6 +54,37 @@ export default function ToolHubPage() {
                         Sign out
                     </button>
                 </header>
+
+                <section
+                    className="grid gap-4 rounded-[1.75rem] border border-[rgba(35,171,248,0.2)] p-5 shadow-[0_18px_42px_rgba(14,76,113,0.08)] md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                    style={{
+                        background:
+                            "radial-gradient(circle at 16% 28%, rgba(35,171,248,0.16), transparent 34%), radial-gradient(circle at 84% 70%, rgba(255,195,23,0.18), transparent 32%), linear-gradient(135deg, rgba(236,247,255,0.98) 0%, rgba(245,251,255,0.98) 54%, rgba(255,247,227,0.98) 100%)",
+                    }}
+                >
+                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(35,171,248,0.12)] text-[var(--brand-navy)]">
+                        <Link2 className="h-6 w-6" />
+                    </div>
+
+                    <div className="min-w-0">
+                        <h2 className="text-lg font-semibold text-[var(--brand-navy)]">
+                            Optional SnapClass connection
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-[var(--text-muted)] md:text-[0.96rem]">
+                            SnapClass is a classroom management tool for student Snap! coding. When used together, ClassEcho can show student code snapshots and emoji reactions in the Visualization Mode along with your observation logs. You can still use ClassEcho without SnapClass.
+                        </p>
+                    </div>
+
+                    <a
+                        href="https://lin-class17.csc.ncsu.edu/snapclass/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center gap-2 self-start rounded-[1rem] border border-[rgba(35,171,248,0.18)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--brand-navy)] shadow-[0_12px_26px_rgba(14,76,113,0.08)] transition hover:-translate-y-[1px] hover:border-[rgba(35,171,248,0.32)] hover:bg-[rgba(255,255,255,0.98)] md:self-center"
+                    >
+                        Open SnapClass
+                        <ArrowUpRight className="h-4 w-4" />
+                    </a>
+                </section>
 
                 <section className="grid gap-6 lg:grid-cols-2">
                     <button

@@ -150,10 +150,18 @@ function normalizeOnTaskValue(value: unknown): string {
 }
 
 function splitStudentIds(rawValue: unknown): string[] {
-  return String(rawValue ?? "")
-    .split(/[;,]+/)
-    .map((value) => value.trim())
-    .filter(Boolean);
+  return Array.from(
+    new Set(
+      String(rawValue ?? "")
+        .split(/[;,]+/)
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function normalizeStudentIdValue(rawValue: unknown): string {
+  return splitStudentIds(rawValue).join("; ");
 }
 
 function mapTeacherObservationToHelpRows(observation: TeacherObservationData): HelpRow[] {
@@ -165,7 +173,7 @@ function mapTeacherObservationToHelpRows(observation: TeacherObservationData): H
   }
 
   const selectedTagBuckets = bucketSelectedTags(observation.selected_tags);
-  const studentIds = splitStudentIds(observation.student_id);
+  const studentId = normalizeStudentIdValue(observation.student_id);
   const baseRow = {
     start_time: startTime,
     end_time: endTime,
@@ -179,14 +187,10 @@ function mapTeacherObservationToHelpRows(observation: TeacherObservationData): H
     raw_end: String(observation.end_time ?? ""),
   };
 
-  if (studentIds.length === 0) {
-    return [{ ...baseRow, student_id: "" }];
-  }
-
-  return studentIds.map((studentId) => ({
+  return [{
     ...baseRow,
     student_id: studentId,
-  }));
+  }];
 }
 
 function mapStudentObservationToRequestRows(observation: StudentObservationData): RequestRow[] {
@@ -206,7 +210,7 @@ function mapStudentObservationToRequestRows(observation: StudentObservationData)
   ];
   const behaviorTags =
     selectedTagBuckets.behavior.length > 0 ? selectedTagBuckets.behavior : allSelectedTags;
-  const studentIds = splitStudentIds(observation.student_id);
+  const studentId = normalizeStudentIdValue(observation.student_id);
   const baseRow = {
     start_time: startTime,
     end_time: endTime,
@@ -219,14 +223,10 @@ function mapStudentObservationToRequestRows(observation: StudentObservationData)
     raw_end: String(observation.end_time ?? ""),
   };
 
-  if (studentIds.length === 0) {
-    return [{ ...baseRow, student_id: "" }];
-  }
-
-  return studentIds.map((studentId) => ({
+  return [{
     ...baseRow,
     student_id: studentId,
-  }));
+  }];
 }
 
 export async function fetchVisualizationSessionData(

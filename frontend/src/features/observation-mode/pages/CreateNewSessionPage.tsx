@@ -1,6 +1,6 @@
 // Observation workflow page for creating a new session and its starting metadata.
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import ObservationInfoButton from "@/features/observation-mode/components/ObservationInfoButton";
 import ObservationPanelLayout from "@/features/observation-mode/components/ObservationPanelLayout";
@@ -12,10 +12,29 @@ import {
   readCreateSessionDraft,
   saveCreateSessionDraft,
 } from "@/features/observation-mode/config/createSessionDraftStorage";
+import {
+  JOIN_CODE_ALREADY_EXISTS_MESSAGE,
+  JOIN_CODE_LOOKUP_ERROR_MESSAGE,
+} from "@/features/observation-mode/config/createSessionValidation";
+import { getSessionByJoinCode } from "@/services/getSessionByJoinCode";
+
+function createRandomJoinCode() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+
+  for (let index = 0; index < 8; index += 1) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return code;
+}
 
 export default function CreateNewSessionPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const initialDraft = readCreateSessionDraft();
+  const navigationState = (location.state as { joinCodeError?: string } | null) ?? null;
+  const navigationJoinCodeError = navigationState?.joinCodeError ?? "";
   const creatorId = Number(localStorage.getItem("user_id"));
 
   const [teacherName, setTeacherName] = useState(initialDraft.teacherName);
@@ -25,12 +44,23 @@ export default function CreateNewSessionPage() {
   const [joinCodeMode, setJoinCodeMode] = useState<JoinCodeMode>(initialDraft.joinCodeMode);
   const [isDefaultTags, setIsDefaultTags] = useState(initialDraft.isDefaultTags);
   const [studentIdNumericOnly, setStudentIdNumericOnly] = useState(initialDraft.studentIdNumericOnly);
+  const [joinCodeError, setJoinCodeError] = useState(navigationState?.joinCodeError ?? "");
+  const [isCheckingJoinCode, setIsCheckingJoinCode] = useState(initialDraft.joinCode.trim().length >= 8);
 
   const normalizedTeacherName = teacherName.trim();
   const normalizedSessionName = sessionName.trim();
   const normalizedJoinCode = joinCode.trim().toUpperCase();
   const isJoinCodeValid = normalizedJoinCode.length >= 8;
-  const canProceed = Boolean(Number.isInteger(creatorId) && creatorId > 0 && normalizedTeacherName && normalizedSessionName && isJoinCodeValid);
+  const isGenerateMode = joinCodeMode === "generate";
+  const canProceed = Boolean(
+    Number.isInteger(creatorId)
+      && creatorId > 0
+      && normalizedTeacherName
+      && normalizedSessionName
+      && isJoinCodeValid
+      && !joinCodeError
+      && !isCheckingJoinCode,
+  );
 
   useEffect(() => {
     saveCreateSessionDraft({
@@ -44,22 +74,80 @@ export default function CreateNewSessionPage() {
     });
   }, [isDefaultTags, joinCode, joinCodeMode, lessonDescription, sessionName, studentIdNumericOnly, teacherName]);
 
-  const generateJoinCode = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let code = "";
+  useEffect(() => {
+    setJoinCodeError(navigationJoinCodeError);
+  }, [navigationJoinCodeError]);
 
-    for (let index = 0; index < 8; index += 1) {
-      code += chars[Math.floor(Math.random() * chars.length)];
+  useEffect(() => {
+    if (!isJoinCodeValid) {
+      setIsCheckingJoinCode(false);
+      setJoinCodeError("");
+      return;
     }
 
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      setIsCheckingJoinCode(true);
+
+      try {
+        const joinCodeLookup = await getSessionByJoinCode(normalizedJoinCode);
+
+        if (!active) {
+          return;
+        }
+
+        if (joinCodeLookup.success && joinCodeLookup.session) {
+          setJoinCodeError(JOIN_CODE_ALREADY_EXISTS_MESSAGE);
+          return;
+        }
+
+        if (!joinCodeLookup.success && joinCodeLookup.error !== "Failed to find session") {
+          setJoinCodeError(joinCodeLookup.error || JOIN_CODE_LOOKUP_ERROR_MESSAGE);
+          return;
+        }
+
+        setJoinCodeError("");
+      } finally {
+        if (active) {
+          setIsCheckingJoinCode(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [isJoinCodeValid, normalizedJoinCode, joinCodeMode]);
+
+  const handleJoinCodeChange = (value: string) => {
+    const nextJoinCode = value.toUpperCase().replace(/\s+/g, "");
+    setJoinCode(nextJoinCode);
+    setJoinCodeError("");
+    setIsCheckingJoinCode(nextJoinCode.length >= 8);
+  };
+
+  const handleJoinCodeModeChange = (value: JoinCodeMode) => {
+    setJoinCodeMode(value);
+    setJoinCodeError("");
+    setIsCheckingJoinCode(normalizedJoinCode.length >= 8);
+  };
+
+  const handleGenerateJoinCode = () => {
+    const code = createRandomJoinCode();
+    setIsCheckingJoinCode(true);
     setJoinCode(code);
+    setJoinCodeError("");
   };
 
   useEffect(() => {
-    if (joinCodeMode === "generate" && normalizedJoinCode.length < 8) {
-      generateJoinCode();
+    if (isGenerateMode && normalizedJoinCode.length < 8) {
+      const code = createRandomJoinCode();
+      setIsCheckingJoinCode(true);
+      setJoinCode(code);
+      setJoinCodeError("");
     }
-  }, [joinCodeMode, normalizedJoinCode.length]);
+  }, [isGenerateMode, normalizedJoinCode.length]);
 
   const handleNext = () => {
     if (!canProceed) {
@@ -82,6 +170,32 @@ export default function CreateNewSessionPage() {
       state: draft,
     });
   };
+
+  const joinCodeHelperText = joinCodeError
+    ? ""
+    : isCheckingJoinCode && isJoinCodeValid
+      ? "Checking whether this join code is available..."
+      : isGenerateMode
+        ? "A random 8-character code is ready to use."
+        : joinCode.length > 0 && !isJoinCodeValid
+          ? "Join code must be at least 8 characters."
+          : isJoinCodeValid
+            ? "Join code is available."
+            : "Enter your own join code using at least 8 characters.";
+
+  const joinCodeInputWrapClassName = [
+    "observation-code-input-wrap",
+    isGenerateMode ? "observation-code-input-wrap--with-action observation-code-input-wrap--readonly" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const joinCodeInputClassName = [
+    "observation-field-input",
+    isGenerateMode ? "observation-field-input--with-action observation-field-input--readonly" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const handleCancel = () => {
     clearCreateSessionDraft();
@@ -107,9 +221,9 @@ export default function CreateNewSessionPage() {
             type="button"
             className="observation-button observation-button--accent"
             onClick={handleNext}
-            disabled={!canProceed}
+            disabled={!canProceed || isCheckingJoinCode}
           >
-            Next
+            {isCheckingJoinCode ? "Checking Code..." : "Next"}
           </button>
         </div>
       }
@@ -191,39 +305,39 @@ export default function CreateNewSessionPage() {
                 },
               ]}
               value={joinCodeMode}
-              onChange={(value) => setJoinCodeMode(value)}
+              onChange={handleJoinCodeModeChange}
             />
             <div className="observation-code-row observation-code-row--single">
-              <div className={`observation-code-input-wrap${joinCodeMode === "generate" ? " observation-code-input-wrap--with-action" : ""}`}>
+              <div className={joinCodeInputWrapClassName}>
                 <input
                   type="text"
                   value={joinCode}
-                  onChange={(event) => setJoinCode(event.target.value.toUpperCase().replace(/\s+/g, ""))}
+                  onChange={(event) => handleJoinCodeChange(event.target.value)}
                   placeholder={joinCodeMode === "generate" ? "Generated join code" : "Enter your custom join code"}
-                  className={`observation-field-input${joinCodeMode === "generate" ? " observation-field-input--with-action" : ""}`}
+                  className={joinCodeInputClassName}
                   required
                   readOnly={joinCodeMode === "generate"}
-                  aria-invalid={joinCode.length > 0 && !isJoinCodeValid}
+                  tabIndex={joinCodeMode === "generate" ? -1 : 0}
+                  aria-readonly={joinCodeMode === "generate"}
+                  aria-invalid={Boolean(joinCodeError) || (joinCode.length > 0 && !isJoinCodeValid)}
                 />
                 {joinCodeMode === "generate" && (
                   <button
                     type="button"
                     className="observation-inline-button observation-code-action-button"
-                    onClick={generateJoinCode}
+                    onClick={handleGenerateJoinCode}
                   >
                     Generate new code
                   </button>
                 )}
               </div>
             </div>
-            {joinCodeMode === "custom" && joinCode.length > 0 && !isJoinCodeValid ? (
-              <span className="observation-field-helper observation-field-helper--error">
-                Join code must be at least 8 characters.
+            {joinCodeError ? (
+              <span className="observation-field-helper observation-field-helper--error" role="alert" aria-live="polite">
+                {joinCodeError}
               </span>
-            ) : joinCodeMode === "generate" ? (
-              <span className="observation-field-helper">A random 8-character code is ready to use.</span>
             ) : (
-              <span className="observation-field-helper">Enter your own join code using at least 8 characters.</span>
+              <span className="observation-field-helper">{joinCodeHelperText}</span>
             )}
           </div>
         </div>

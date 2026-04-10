@@ -11,13 +11,71 @@ import {
   clearCreateSessionDraft,
   type CreateSessionDraft,
   readCreateSessionDraft,
+  saveCreateSessionDraft,
 } from "@/features/observation-mode/config/createSessionDraftStorage";
+import { JOIN_CODE_ALREADY_EXISTS_MESSAGE } from "@/features/observation-mode/config/createSessionValidation";
 import { createSession } from "@/services/createSession";
 import { updateUserEditSessions } from "@/services/updateUserEditSessions";
 import { updateUserSessions } from "@/services/updateUserSessions";
 
 type SessionEditorView = "teacher" | "student";
 type StatusTone = "error" | "success";
+
+const DEFAULT_STUDENT_BEHAVIOR_TAGS = [
+  "Coding",
+  "Collaborating",
+  "Logging In",
+  "Planning",
+  "Reading Code",
+  "Reading Instructions",
+  "Talking w/ teacher",
+  "Waiting for help",
+  "Debugging",
+  "On Unrelated Tab",
+  "Requesting Help",
+  "Running Code",
+  "Talking w/ peer",
+];
+
+const DEFAULT_TEACHER_BEHAVIOR_TAGS = [
+  "Open-ended questions",
+  "Direct to tasks",
+  "Directs to resources",
+  "Models struggle",
+  "Teaches CT concept",
+  "Manages behavior",
+  "Stretch goals",
+  "Reminds to save code",
+  "Encourages collaboration",
+  "Encourages participation",
+  "Organizes peer tutors",
+  "Organizes paired programming",
+  "Encourages help-seeking",
+  "Teaches collaboration",
+  "Normalizes mistakes",
+  "Connects to student interest",
+];
+
+const DEFAULT_FUNCTION_TAGS = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
+const DEFAULT_STRUCTURE_TAGS = ["Activity", "Help-seeking queue", "LMS", "Rules and Norms", "Snap!"];
+
+function createDefaultTagDraft() {
+  return {
+    teacherBehaviorTags: [...DEFAULT_TEACHER_BEHAVIOR_TAGS],
+    functionTags: [...DEFAULT_FUNCTION_TAGS],
+    structureTags: [...DEFAULT_STRUCTURE_TAGS],
+    studentTags: [...DEFAULT_STUDENT_BEHAVIOR_TAGS],
+  };
+}
+
+function createBlankTagDraft() {
+  return {
+    teacherBehaviorTags: [] as string[],
+    functionTags: [] as string[],
+    structureTags: [] as string[],
+    studentTags: [] as string[],
+  };
+}
 
 interface CreatedSessionState {
   sessionId: number;
@@ -31,42 +89,6 @@ interface CreatedSessionState {
 }
 
 export default function CustomizeSessionPage() {
-  const consStudentBehaviorTags = [
-    "Coding",
-    "Collaborating",
-    "Logging In",
-    "Planning",
-    "Reading Code",
-    "Reading Instructions",
-    "Talking w/ teacher",
-    "Waiting for help",
-    "Debugging",
-    "On Unrelated Tab",
-    "Requesting Help",
-    "Running Code",
-    "Talking w/ peer",
-  ];
-  const consTeacherBehaviorTags = [
-    "Open-ended questions",
-    "Direct to tasks",
-    "Directs to resources",
-    "Models struggle",
-    "Teaches CT concept",
-    "Manages behavior",
-    "Stretch goals",
-    "Reminds to save code",
-    "Encourages collaboration",
-    "Encourages participation",
-    "Organizes peer tutors",
-    "Organizes paired programming",
-    "Encourages help-seeking",
-    "Teaches collaboration",
-    "Normalizes mistakes",
-    "Connects to student interest",
-  ];
-  const consFunctionTags = ["Comp Thinking Skills", "Culture", "Independence", "Motivate", "Manage Environment"];
-  const consStructureTags = ["Activity", "Help-seeking queue", "LMS", "Rules and Norms", "Snap!"];
-
   const navigate = useNavigate();
   const location = useLocation();
   const storedDraft = readCreateSessionDraft();
@@ -74,26 +96,43 @@ export default function CustomizeSessionPage() {
     ...storedDraft,
     ...((location.state as Partial<CreateSessionDraft> | null) || {}),
   };
+  const useDefaultTagPreset = Boolean(sessionData.isDefaultTags);
+  const initialTagDraft = useDefaultTagPreset
+    ? sessionData.defaultTagDraft ?? createDefaultTagDraft()
+    : sessionData.customTagDraft ?? createBlankTagDraft();
 
   const [addTagModalString, setAddTagModalString] = useState("");
   const [viewing, setViewing] = useState<SessionEditorView>("teacher");
-  const [teacherBehaviorTags, setTeacherBehaviorTags] = useState<string[]>([]);
-  const [functionTags, setFunctionTags] = useState<string[]>([]);
-  const [structureTags, setStructureTags] = useState<string[]>([]);
-  const [studentTags, setStudentTags] = useState<string[]>([]);
+  const [teacherBehaviorTags, setTeacherBehaviorTags] = useState<string[]>(() => initialTagDraft.teacherBehaviorTags);
+  const [functionTags, setFunctionTags] = useState<string[]>(() => initialTagDraft.functionTags);
+  const [structureTags, setStructureTags] = useState<string[]>(() => initialTagDraft.structureTags);
+  const [studentTags, setStudentTags] = useState<string[]>(() => initialTagDraft.studentTags);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusTone, setStatusTone] = useState<StatusTone>("success");
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [createdSession, setCreatedSession] = useState<CreatedSessionState | null>(null);
 
   useEffect(() => {
-    if (sessionData.isDefaultTags) {
-      setTeacherBehaviorTags([...consTeacherBehaviorTags]);
-      setFunctionTags([...consFunctionTags]);
-      setStructureTags([...consStructureTags]);
-      setStudentTags([...consStudentBehaviorTags]);
-    }
-  }, [sessionData.isDefaultTags]);
+    saveCreateSessionDraft(
+      useDefaultTagPreset
+        ? {
+            defaultTagDraft: {
+              teacherBehaviorTags,
+              functionTags,
+              structureTags,
+              studentTags,
+            },
+          }
+        : {
+            customTagDraft: {
+              teacherBehaviorTags,
+              functionTags,
+              structureTags,
+              studentTags,
+            },
+          },
+    );
+  }, [functionTags, structureTags, studentTags, teacherBehaviorTags, useDefaultTagPreset]);
 
   const addTag = (category: string, value: string) => {
     switch (category) {
@@ -132,16 +171,33 @@ export default function CustomizeSessionPage() {
   const resetSectionToDefaults = (category: "behavior" | "function" | "structure" | "student") => {
     switch (category) {
       case "behavior":
-        setTeacherBehaviorTags([...consTeacherBehaviorTags]);
+        setTeacherBehaviorTags([...DEFAULT_TEACHER_BEHAVIOR_TAGS]);
         break;
       case "function":
-        setFunctionTags([...consFunctionTags]);
+        setFunctionTags([...DEFAULT_FUNCTION_TAGS]);
         break;
       case "structure":
-        setStructureTags([...consStructureTags]);
+        setStructureTags([...DEFAULT_STRUCTURE_TAGS]);
         break;
       case "student":
-        setStudentTags([...consStudentBehaviorTags]);
+        setStudentTags([...DEFAULT_STUDENT_BEHAVIOR_TAGS]);
+        break;
+    }
+  };
+
+  const clearSectionTags = (category: "behavior" | "function" | "structure" | "student") => {
+    switch (category) {
+      case "behavior":
+        setTeacherBehaviorTags([]);
+        break;
+      case "function":
+        setFunctionTags([]);
+        break;
+      case "structure":
+        setStructureTags([]);
+        break;
+      case "student":
+        setStudentTags([]);
         break;
     }
   };
@@ -216,6 +272,15 @@ export default function CustomizeSessionPage() {
       setIsCreatingSession(false);
     } catch (error) {
       console.error("Failed to create session", error);
+      if (error instanceof Error && error.message === JOIN_CODE_ALREADY_EXISTS_MESSAGE) {
+        navigate("/create-new", {
+          state: {
+            joinCodeError: JOIN_CODE_ALREADY_EXISTS_MESSAGE,
+          },
+        });
+        return;
+      }
+
       setStatusTone("error");
       setStatusMessage(error instanceof Error ? error.message : "Failed to create the session. Please review the details and try again.");
       setIsCreatingSession(false);
@@ -307,7 +372,8 @@ export default function CustomizeSessionPage() {
       tags: teacherBehaviorTags,
       tone: "cyan" as const,
       onAdd: () => setAddTagModalString("behavior"),
-      onResetToDefault: () => resetSectionToDefaults("behavior"),
+      onResetToDefault: useDefaultTagPreset ? () => resetSectionToDefaults("behavior") : undefined,
+      onClearTags: useDefaultTagPreset ? undefined : () => clearSectionTags("behavior"),
       onRemove: (tag: string) => removeTag("teacher_behavior", tag),
     },
     {
@@ -317,7 +383,8 @@ export default function CustomizeSessionPage() {
       tags: functionTags,
       tone: "blue" as const,
       onAdd: () => setAddTagModalString("function"),
-      onResetToDefault: () => resetSectionToDefaults("function"),
+      onResetToDefault: useDefaultTagPreset ? () => resetSectionToDefaults("function") : undefined,
+      onClearTags: useDefaultTagPreset ? undefined : () => clearSectionTags("function"),
       onRemove: (tag: string) => removeTag("function", tag),
     },
     {
@@ -327,7 +394,8 @@ export default function CustomizeSessionPage() {
       tags: structureTags,
       tone: "rose" as const,
       onAdd: () => setAddTagModalString("structure"),
-      onResetToDefault: () => resetSectionToDefaults("structure"),
+      onResetToDefault: useDefaultTagPreset ? () => resetSectionToDefaults("structure") : undefined,
+      onClearTags: useDefaultTagPreset ? undefined : () => clearSectionTags("structure"),
       onRemove: (tag: string) => removeTag("structure", tag),
     },
   ];
@@ -391,6 +459,7 @@ export default function CustomizeSessionPage() {
                 tone={section.tone}
                 onAdd={section.onAdd}
                 onResetToDefault={section.onResetToDefault}
+                onClearTags={section.onClearTags}
                 onRemove={section.onRemove}
               />
             ))}
@@ -402,7 +471,8 @@ export default function CustomizeSessionPage() {
             tags={studentTags}
             tone="green"
             onAdd={() => setAddTagModalString("student")}
-            onResetToDefault={() => resetSectionToDefaults("student")}
+            onResetToDefault={useDefaultTagPreset ? () => resetSectionToDefaults("student") : undefined}
+            onClearTags={useDefaultTagPreset ? undefined : () => clearSectionTags("student")}
             onRemove={(tag) => removeTag("student", tag)}
           />
         )}

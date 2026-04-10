@@ -74,6 +74,7 @@ export function createVisualizationScheduleRow(
     session_period_id: initial?.session_period_id ?? null,
     date: String(initial?.date ?? "").trim(),
     period: String(initial?.period ?? "").trim(),
+    student_id_prefix: String(initial?.student_id_prefix ?? "").trim(),
     timezone: normalizeVisualizationTimeZone(initial?.timezone, DEFAULT_NEW_REPLAY_WINDOW_TIME_ZONE),
     start_time: String(initial?.start_time ?? "").trim(),
     end_time: String(initial?.end_time ?? "").trim(),

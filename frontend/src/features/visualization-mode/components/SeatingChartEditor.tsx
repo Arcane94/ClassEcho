@@ -415,7 +415,7 @@ export function SeatingChartEditor({
   }
 
   return (
-    <div className="rounded-[1.5rem] border border-[rgba(148,163,184,0.2)] bg-[rgba(255,255,255,0.92)] p-4 shadow-[0_16px_34px_rgba(15,23,42,0.06)] sm:p-5">
+    <div className="min-w-0 rounded-[1.5rem] border border-[rgba(148,163,184,0.2)] bg-[rgba(255,255,255,0.92)] p-4 shadow-[0_16px_34px_rgba(15,23,42,0.06)] sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-[var(--brand-navy)]">Seating chart editor</h3>
@@ -428,7 +428,7 @@ export function SeatingChartEditor({
           <div className="relative w-full sm:w-auto" ref={copyMenuRef}>
             <button
               type="button"
-              className="observation-inline-button observation-inline-button--compact w-full justify-center sm:w-auto"
+              className="observation-inline-button observation-inline-button--compact observation-inline-button--setup-rounded w-full justify-center sm:w-auto"
               onClick={() => setIsCopyMenuOpen((current) => !current)}
               disabled={copySourceRows.length === 0}
               title={
@@ -469,7 +469,7 @@ export function SeatingChartEditor({
 
           <button
             type="button"
-            className="observation-inline-button observation-inline-button--danger observation-inline-button--compact w-full justify-center sm:w-auto"
+            className="observation-inline-button observation-inline-button--danger observation-inline-button--compact observation-inline-button--setup-rounded w-full justify-center sm:w-auto"
             onClick={() => onChangeSeats(replayWindow.id, [])}
           >
             <Trash2 className="h-4 w-4" />
@@ -527,7 +527,7 @@ export function SeatingChartEditor({
           </div>
         </div>
 
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_12.5rem] xl:gap-5">
+        <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_12.5rem] xl:gap-5">
           <div className="overflow-auto pb-1">
             <div
               className="grid w-max gap-2 rounded-[1.25rem] border border-[rgba(148,163,184,0.22)] bg-[rgba(247,250,252,0.92)] p-3"
@@ -592,7 +592,7 @@ export function SeatingChartEditor({
             <div className="mt-4 space-y-2">
               <button
                 type="button"
-                className={`flex w-full items-center justify-center rounded-[0.9rem] border px-3 py-2 text-sm font-semibold transition ${
+                className={`flex min-h-[2.75rem] w-full items-center justify-center rounded-[1rem] border px-3 py-2 text-sm font-semibold transition ${
                   selectedSeat?.seat_type === "student"
                     ? "border-[var(--accent-color-deep)] bg-[rgba(224,242,254,0.96)] text-[var(--accent-color-deep)]"
                     : "border-[rgba(148,163,184,0.22)] bg-white text-[var(--brand-navy)]"
@@ -603,7 +603,7 @@ export function SeatingChartEditor({
               </button>
               <button
                 type="button"
-                className={`flex w-full items-center justify-center rounded-[0.9rem] border px-3 py-2 text-sm font-semibold transition ${
+                className={`flex min-h-[2.75rem] w-full items-center justify-center rounded-[1rem] border px-3 py-2 text-sm font-semibold transition ${
                   selectedSeat?.seat_type === "teacher"
                     ? "border-[#f59e0b] bg-[rgba(254,243,199,0.96)] text-[#92400e]"
                     : "border-[rgba(148,163,184,0.22)] bg-white text-[var(--brand-navy)]"
@@ -614,7 +614,7 @@ export function SeatingChartEditor({
               </button>
               <button
                 type="button"
-                className="flex w-full items-center justify-center rounded-[0.9rem] border border-[rgba(248,113,113,0.22)] bg-white px-3 py-2 text-sm font-semibold text-[#b91c1c] transition hover:bg-[rgba(254,242,242,0.98)]"
+                className="flex min-h-[2.75rem] w-full items-center justify-center rounded-[1rem] border border-[rgba(248,113,113,0.22)] bg-white px-3 py-2 text-sm font-semibold text-[#b91c1c] transition hover:bg-[rgba(254,242,242,0.98)]"
                 onClick={() => setSelectedSeatType("clear")}
               >
                 Clear cell

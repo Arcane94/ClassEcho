@@ -52,6 +52,17 @@ function intlikeStr(v: any): string {
     return Number.isFinite(x) ? String(Math.trunc(x)) : s;
 }
 
+function splitObservationStudentIds(rawValue: string): string[] {
+    return Array.from(
+        new Set(
+            cleanCsvText(rawValue)
+                .split(/[;,]+/)
+                .map((value) => intlikeStr(value))
+                .filter(Boolean)
+        )
+    );
+}
+
 function normCols(row: any) {
     const o: any = {};
     Object.keys(row).forEach((k) => {
@@ -680,6 +691,7 @@ export function buildGroups(
             grouped[key] = {
                 date,
                 period,
+                student_id_prefix: cleanCsvText(r.student_id_prefix),
                 timezone: r.timezone,
                 seats: (r.seats || []).map((seatRow) => ({
                     seat_id:
@@ -696,6 +708,9 @@ export function buildGroups(
             };
         }
         const g = grouped[key];
+        if (!g.student_id_prefix && r.student_id_prefix) {
+            g.student_id_prefix = cleanCsvText(r.student_id_prefix);
+        }
         if (!g.timezone && r.timezone) {
             g.timezone = r.timezone;
         }
@@ -776,12 +791,14 @@ export function buildGroups(
                 for (const rec of sub) {
                     const sIso = rec.s2.toISOString();
                     const eIso = rec.e2.toISOString();
+                    const studentIds = splitObservationStudentIds(rec.student_id);
 
-                    if (rec.student_id && present.has(rec.student_id)) {
-                        if (!helpIntervals[rec.student_id]) {
-                            helpIntervals[rec.student_id] = [];
+                    for (const studentId of studentIds) {
+                        if (!present.has(studentId)) continue;
+                        if (!helpIntervals[studentId]) {
+                            helpIntervals[studentId] = [];
                         }
-                        helpIntervals[rec.student_id].push([sIso, eIso]);
+                        helpIntervals[studentId].push([sIso, eIso]);
                     }
 
                     teacherLogs.push({
@@ -805,9 +822,8 @@ export function buildGroups(
         const studentLogs: StudentLog[] = [];
         let hasReq = false;
 
-        if (requests && present.size) {
+        if (requests) {
             let subReq = requests
-                .filter((h) => present.has(h.student_id))
                 .map((h) => ({
                     student_id: h.student_id,
                     s2: h.start_time,
@@ -832,13 +848,21 @@ export function buildGroups(
             for (const rec of subReq) {
                 const sIso = rec.s2.toISOString();
                 const eIso = rec.e2.toISOString();
+                const studentIds = splitObservationStudentIds(rec.student_id);
 
-                if (isHelpRequestBehavior(rec.behavior_tags) && rec.student_id) {
-                    if (!requestIntervals[rec.student_id]) {
-                        requestIntervals[rec.student_id] = [];
+                if (isHelpRequestBehavior(rec.behavior_tags)) {
+                    let matchedStudent = false;
+                    for (const studentId of studentIds) {
+                        if (!present.has(studentId)) continue;
+                        if (!requestIntervals[studentId]) {
+                            requestIntervals[studentId] = [];
+                        }
+                        requestIntervals[studentId].push([sIso, eIso]);
+                        matchedStudent = true;
                     }
-                    requestIntervals[rec.student_id].push([sIso, eIso]);
-                    hasReq = true;
+                    if (matchedStudent) {
+                        hasReq = true;
+                    }
                 }
 
                 studentLogs.push({

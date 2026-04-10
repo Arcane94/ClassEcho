@@ -18,7 +18,47 @@ import {
 const STUDENT_KEY = "pendingStudentObservations";
 const TEACHER_KEY = "pendingTeacherObservations";
 const MAX_FAILED_ATTEMPTS = 3;
+const FLUSH_INTERVAL_MS = 15000;
 let activeFlushPromise: Promise<boolean> | null = null;
+let syncRegistrationCount = 0;
+let syncIntervalId: number | null = null;
+
+function triggerOfflineQueueFlush() {
+    void offlineLogging();
+}
+
+function attachOfflineQueueSync() {
+    if (typeof window === "undefined") {
+        return;
+    }
+
+    if (syncRegistrationCount === 0) {
+        window.addEventListener("online", triggerOfflineQueueFlush);
+        syncIntervalId = window.setInterval(triggerOfflineQueueFlush, FLUSH_INTERVAL_MS);
+        triggerOfflineQueueFlush();
+    }
+
+    syncRegistrationCount += 1;
+}
+
+function detachOfflineQueueSync() {
+    if (typeof window === "undefined" || syncRegistrationCount === 0) {
+        return;
+    }
+
+    syncRegistrationCount -= 1;
+
+    if (syncRegistrationCount > 0) {
+        return;
+    }
+
+    window.removeEventListener("online", triggerOfflineQueueFlush);
+
+    if (syncIntervalId !== null) {
+        window.clearInterval(syncIntervalId);
+        syncIntervalId = null;
+    }
+}
 
 type QueuedObservation = (StudentObservationData | TeacherObservationData) & {
     queue_id?: string;
@@ -72,7 +112,10 @@ function writeQueuedObservations(storageKey: string, observations: QueuedObserva
 }
 
 function removeQueueMetadata(observation: QueuedObservation): StudentObservationData | TeacherObservationData {
-    const { queue_id, status, failed_attempts, ...payload } = observation;
+    const payload = { ...observation };
+    delete payload.queue_id;
+    delete payload.status;
+    delete payload.failed_attempts;
     return payload as StudentObservationData | TeacherObservationData;
 }
 
@@ -104,6 +147,10 @@ export function storeObservationLocally(observationData: (StudentObservationData
 
         //Log in console
         console.log(`Stored ${isStudentObservation ? 'student observation' : 'teacher observation'} in local storage.`)
+
+        if (isUserOnline()) {
+            triggerOfflineQueueFlush();
+        }
     } catch (error) {
         console.log("Error occured saving observation", error);
     }
@@ -201,4 +248,12 @@ export async function offlineLogging() {
     })();
 
     return activeFlushPromise;
+}
+
+export function registerOfflineQueueSync() {
+    attachOfflineQueueSync();
+
+    return () => {
+        detachOfflineQueueSync();
+    };
 }

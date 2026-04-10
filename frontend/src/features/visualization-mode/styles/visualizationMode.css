@@ -675,7 +675,7 @@ body {
   flex: 0 0 250px;
   max-width: 250px;
   display: grid;
-  grid-template-columns: minmax(0, 9.5rem) minmax(0, 5.5rem);
+  grid-template-columns: minmax(0, 10.35rem) minmax(0, 4.65rem);
   gap: 8px;
   justify-content: start;
   align-content: start;
@@ -702,7 +702,7 @@ body {
 
 .controls-left .ctrl-period {
   min-width: 0;
-  padding-right: 12px;
+  padding-right: 6px;
 }
 
 .controls-left .ctrl-prefix {
@@ -770,7 +770,7 @@ body {
   color: var(--ink);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 8px 1.9rem 8px 10px;
   font-size: 0.86rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
@@ -963,19 +963,29 @@ body {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.info-tip-shell--open {
+  z-index: 1000;
+  isolation: isolate;
 }
 
 .info-tip-btn {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.96);
+  background: #fff;
   color: var(--ink-dim);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   transition:
     color 120ms ease,
     border-color 120ms ease,
@@ -987,7 +997,7 @@ body {
 .info-tip-btn[aria-expanded="true"] {
   color: var(--accent);
   border-color: color-mix(in oklab, var(--accent) 60%, var(--border));
-  background: color-mix(in oklab, var(--panel-2) 80%, var(--accent-soft));
+  background: #fff;
 }
 
 .info-tip-btn:active {
@@ -1002,7 +1012,7 @@ body {
   padding: 9px 10px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: color-mix(in oklab, var(--panel) 96%, white 4%);
+  background: #fff;
   color: var(--ink);
   font-size: 0.78rem;
   font-weight: 500;
@@ -1010,7 +1020,8 @@ body {
   text-transform: none;
   letter-spacing: normal;
   box-shadow: 0 18px 40px rgba(14, 76, 113, 0.14);
-  z-index: 40;
+  z-index: 10000;
+  pointer-events: auto;
 }
 
 .info-tip-popover-top {
@@ -1514,6 +1525,12 @@ body {
   min-width: 0;
 }
 
+.log-row-students {
+  display: flex;
+  min-width: 0;
+  margin: 6px 0 2px;
+}
+
 /* Kind pill (Teacher / Student) */
 .log-kind {
   font-size: 0.68rem;
@@ -1558,16 +1575,18 @@ body {
 
 /* Student pill */
 .log-student-pill {
+  display: inline-flex;
   max-width: 100%;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid var(--border);
   background: rgba(247, 251, 255, 0.96);
   font-size: 0.8rem;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 :root[data-theme="dark"] .log-student-pill {

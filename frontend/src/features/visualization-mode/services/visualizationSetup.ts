@@ -19,6 +19,7 @@ type VisualizationSetupApiRow = {
   session_period_id?: number | null;
   date: string;
   period: string;
+  student_id_prefix?: string | null;
   timezone?: string | null;
   start_time: string;
   end_time: string;
@@ -40,6 +41,7 @@ function normalizeSetupRows(rows: VisualizationSetupApiRow[] | undefined): Visua
       session_period_id: row.session_period_id ?? null,
       date: row.date,
       period: row.period,
+      student_id_prefix: String(row.student_id_prefix ?? "").trim(),
       timezone: row.timezone ?? EASTERN_TIME_ZONE,
       start_time: row.start_time,
       end_time: row.end_time,
@@ -101,6 +103,7 @@ export async function saveVisualizationSetup(
         session_period_id: row.session_period_id ?? null,
         date: row.date,
         period: row.period,
+        student_id_prefix: row.student_id_prefix || null,
         timezone: row.timezone,
         start_time: row.start_time,
         end_time: row.end_time,

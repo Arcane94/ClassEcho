@@ -38,7 +38,7 @@ import relaxedAffectIcon from "@/assets/images/relaxed_affect.svg";
 import tiredAffectIcon from "@/assets/images/tired_affect.svg";
 import sadAffectIcon from "@/assets/images/sad_affect.svg";
 
-import { storeObservationLocally, offlineLogging } from "@/services/offlineQueue";
+import { registerOfflineQueueSync, storeObservationLocally } from "@/services/offlineQueue";
 import { updateSessionObservers } from "@/services/updateSessionObservers";
 import { updateUserSessions } from "@/services/updateUserSessions";
 import { buildObservationClientId, buildObservationWindow, getStoredObserverId } from "@/utils/observationLogging";
@@ -209,33 +209,9 @@ export default function ObservationSessionPage() {
         setStudentObsStudentId((previous) => sanitizeStudentIdInput(previous, studentIdNumericOnly));
     }, [studentIdNumericOnly]);
 
-    //UseEffect to monitor local logs that have been stored when service is offline and send all logs to server when connection is restored
+    //Keep the offline observation queue flushing while this page is active.
     useEffect(() => {
-        //Safety flag to avoid changes on unmount
-        let isMounted = true;
-
-        //Async function to use offlineLogging method
-        const sendLogs = async () => {
-            if (!isMounted) return;
-
-            try {
-                await offlineLogging();
-            } catch (err) {
-                console.error("Error in offline logging:", err);
-            }
-        };
-
-        //Run function immediately
-        sendLogs();
-
-        //Set time interval
-        const interval = setInterval(sendLogs, 15000);
-
-        //Cleanup unmount
-        return () => {
-            isMounted = false;
-            clearInterval(interval);
-        }
+        return registerOfflineQueueSync();
     }, []);
 
     useEffect(() => {

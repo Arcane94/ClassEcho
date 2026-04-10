@@ -27,6 +27,7 @@ export type VisualizationScheduleRow = {
     session_period_id?: number | null;
     date: string;
     period: string;
+    student_id_prefix: string;
     timezone: string;
     start_time: string;
     end_time: string;
@@ -118,6 +119,7 @@ export type EmojiReactionInterval = {
 export type GroupPayload = {
     date: string;
     period: string;
+    student_id_prefix?: string;
     timezone?: string;
     seats: Array<{
         seat_id: string;

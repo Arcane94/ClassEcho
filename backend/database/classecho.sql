@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 09, 2026 at 05:55 AM
+-- Generation Time: Apr 09, 2026 at 08:08 PM
 -- Server version: 8.0.44
 -- PHP Version: 8.2.13
 
@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS `session_periods` (
   `period_label` varchar(50) NOT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL,
+  `student_id_prefix` varchar(50) DEFAULT NULL,
   `time_zone` varchar(64) NOT NULL DEFAULT 'America/New_York',
   PRIMARY KEY (`session_period_id`),
   UNIQUE KEY `session_date_id` (`session_date_id`,`period_label`)

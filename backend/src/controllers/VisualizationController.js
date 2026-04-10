@@ -16,8 +16,7 @@ function parseStudents(raw) {
 }
 
 function parsePrefix(raw) {
-  const prefix = String(raw ?? 'G2L').trim();
-  return prefix || 'G2L';
+  return String(raw ?? '').trim();
 }
 
 function isMysqlDateTime(value) {
@@ -212,6 +211,7 @@ function normalizeSetupPayload(rawValue) {
     const timeZone = normalizeTimeZone(replayWindow?.timezone ?? replayWindow?.time_zone);
     const startTime = normalizeTimeOnly(replayWindow?.start_time);
     const endTime = normalizeTimeOnly(replayWindow?.end_time);
+    const studentIdPrefix = String(replayWindow?.student_id_prefix ?? '').trim();
 
     if (!date && !period && !replayWindow?.start_time && !replayWindow?.end_time) {
       continue;
@@ -298,6 +298,7 @@ function normalizeSetupPayload(rawValue) {
     normalizedReplayWindows.push({
       date,
       period,
+      student_id_prefix: studentIdPrefix,
       timezone: timeZone,
       start_time: startTime,
       end_time: endTime,

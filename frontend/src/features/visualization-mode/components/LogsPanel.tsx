@@ -84,6 +84,22 @@ function anyMatch(values: string[] | undefined, predicate: (v: string) => boolea
     return values.some((v) => predicate(v));
 }
 
+function splitLogStudentIds(raw: string) {
+    return raw
+        .split(/[;,]+/)
+        .map((value) => value.trim())
+        .filter(Boolean);
+}
+
+function formatStudentPillLabel(raw: string) {
+    const studentIds = splitLogStudentIds(raw);
+    if (studentIds.length <= 1) {
+        return `Student ${raw}`;
+    }
+
+    return `Students ${studentIds.join(", ")}`;
+}
+
 type ScrollbarState = {
     visible: boolean;
     thumbHeight: number;
@@ -185,7 +201,11 @@ export function LogsPanel({
         const f = filters ?? {};
 
         return logsAll.filter((row) => {
-            if (!anyMatch(f.student, (v) => row.student_id === v.trim())) return false;
+            const rowStudentIds = splitLogStudentIds(row.student_id);
+            if (!anyMatch(f.student, (v) => {
+                const needle = v.trim();
+                return row.student_id === needle || rowStudentIds.includes(needle);
+            })) return false;
             if (!anyMatch(f.structure, (v) => matchesTagList(row.structure_tags, v))) return false;
             if (!anyMatch(f.behavior, (v) => matchesTagList(row.behavior_tags, v))) return false;
             if (!anyMatch(f.function, (v) => matchesTagList(row.function_tags, v))) return false;
@@ -451,11 +471,6 @@ export function LogsPanel({
                                     {row.kind}
                                 </span>
 
-                                {row.student_id && (
-                                    <span className="log-student-pill">
-                                        Student {row.student_id}
-                                    </span>
-                                )}
                             </div>
 
                             <div className="log-row-meta">
@@ -464,6 +479,14 @@ export function LogsPanel({
                                 <span className="log-meta-duration">{fmtMS(durSec)}</span>
                             </div>
                         </div>
+
+                        {row.student_id && (
+                            <div className="log-row-students">
+                                <span className="log-student-pill">
+                                    {formatStudentPillLabel(row.student_id)}
+                                </span>
+                            </div>
+                        )}
 
                         {renderTagRow("Behavior", row.behavior_tags)}
                         {row.kind === "Teacher" && renderTagRow("Function", row.function_tags)}

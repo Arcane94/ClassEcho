@@ -1,7 +1,7 @@
 :root {
-    --accent-color: #379DEA;
-    --accent-color-deep: #1A84D4;
-    --accent-color-soft: #DFF0FF;
+    --accent-color: #2FAAFF;
+    --accent-color-deep: #0F87E8;
+    --accent-color-soft: #D9F1FF;
     --form-background: #F7FBFF;
     --grey-accent: #D7E5EA;
     --grey-accent-medium: #446477;
@@ -13,8 +13,8 @@
     --snapclass-yellow: #FFC317;
     --brand-navy: #0F2E40;
     --brand-navy-deep: #0A2230;
-    --brand-blue-strong: #258DDE;
-    --brand-purple: #379DEA;
+    --brand-blue-strong: #2FAAFF;
+    --brand-purple: #2FAAFF;
     --brand-magenta: #FFC317;
     --brand-cyan-soft: #DFF0FF;
     --surface-soft: #F7FBFF;
@@ -23,15 +23,15 @@
     --text-muted: #516978;
     --brand-gradient: #EFF7FF;
     --brand-gradient-soft: rgba(255, 255, 255, 0.98);
-    --brand-gradient-surface: rgba(55, 157, 234, 0.1);
-    --brand-border: rgba(55, 157, 234, 0.18);
-    --brand-border-soft: rgba(26, 132, 212, 0.12);
+    --brand-gradient-surface: rgba(47, 170, 255, 0.1);
+    --brand-border: rgba(47, 170, 255, 0.18);
+    --brand-border-soft: rgba(47, 170, 255, 0.12);
     --brand-border-strong: rgba(255, 195, 23, 0.34);
     --brand-shadow: rgba(14, 76, 113, 0.16);
     --brand-shadow-heavy: rgba(14, 76, 113, 0.24);
     --brand-shadow-soft: rgba(14, 76, 113, 0.08);
-    --brand-pill-blue: rgba(55, 157, 234, 0.1);
+    --brand-pill-blue: rgba(47, 170, 255, 0.1);
     --brand-pill-green: rgba(255, 195, 23, 0.16);
-    --brand-glow-blue: rgba(55, 157, 234, 0.18);
+    --brand-glow-blue: rgba(47, 170, 255, 0.18);
     --brand-glow-green: rgba(255, 195, 23, 0.18);
 }

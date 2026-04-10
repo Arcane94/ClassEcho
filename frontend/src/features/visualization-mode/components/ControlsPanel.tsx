@@ -60,14 +60,24 @@ export function ControlsPanel({
                               label,
                               tip,
                               align = "center",
+                              htmlFor,
                           }: {
         label: string;
         tip: string;
         align?: "left" | "center" | "right";
+        htmlFor?: string;
     }) => (
         <span className="label-with-tip">
-      <span className="ctrl-label">{label}</span>
-            <InfoTip content={tip} label={`Explain ${label}`} align={align} />
+            {htmlFor ? (
+                <label className="ctrl-label" htmlFor={htmlFor}>
+                    {label}
+                </label>
+            ) : (
+                <span className="ctrl-label">{label}</span>
+            )}
+            <span className="inline-flex shrink-0 leading-none">
+                <InfoTip content={tip} label={`Explain ${label}`} align={align} />
+            </span>
     </span>
     );
 
@@ -78,13 +88,15 @@ export function ControlsPanel({
 
                 <div className="controls">
                     <div className="controls-section controls-left">
-                        <label className="ctrl ctrl-date">
+                        <div className="ctrl ctrl-date">
                             <LabelWithTip
                                 label="Date"
                                 tip="Choose the classroom observation date to view. Use All dates to switch to the cumulative heatmap."
                                 align="left"
+                                htmlFor="visualization-date-select"
                             />
                             <select
+                                id="visualization-date-select"
                                 className="select select-date"
                                 value={selectedDate ?? ""}
                                 onChange={(e) => onDateChange(e.target.value)}
@@ -95,15 +107,17 @@ export function ControlsPanel({
                                     </option>
                                 ))}
                             </select>
-                        </label>
+                        </div>
 
-                        <label className="ctrl ctrl-period">
+                        <div className="ctrl ctrl-period">
                             <LabelWithTip
                                 label="Period"
                                 tip="Choose which class period to replay for the selected date."
                                 align="right"
+                                htmlFor="visualization-period-select"
                             />
                             <select
+                                id="visualization-period-select"
                                 className="select select-period"
                                 value={period ?? ""}
                                 onChange={(e) => onPeriodChange(e.target.value)}
@@ -114,24 +128,26 @@ export function ControlsPanel({
                                     </option>
                                 ))}
                             </select>
-                        </label>
+                        </div>
 
-                        <label className="ctrl ctrl-span-2 ctrl-prefix">
+                        <div className="ctrl ctrl-span-2 ctrl-prefix">
                             <LabelWithTip
                                 label="Student ID Prefix"
-                                tip='Enter the prefix that, when combined with a student ID, forms the SnapClass username (for example, "G2L" becomes G2L132).'
+                                tip='Optional. Use this only for SnapClass code logs. Example: "G2L" makes student 132 become G2L132.'
                                 align="left"
+                                htmlFor="visualization-student-id-prefix"
                             />
                             <input
+                                id="visualization-student-id-prefix"
                                 className="text-input text-input-prefix"
                                 type="text"
                                 value={isnapPrefix}
                                 onChange={(e) => onIsnapPrefixChange(e.target.value)}
-                                placeholder="Enter prefix"
+                                placeholder="Optional, e.g. G2L"
                                 spellCheck={false}
                                 autoComplete="off"
                             />
-                        </label>
+                        </div>
                     </div>
 
                     <div className="controls-section controls-right">
@@ -213,7 +229,7 @@ export function ControlsPanel({
                             />
                         </div>
                         <div
-                            className={`hud-value${allDatesMode ? " hud-value-status-cumulative" : ""}`}
+                            className={`hud-value${allDatesMode ? " hud-value-status-cumulative" : ""}${current && !allDatesMode ? " hud-clock" : ""}`}
                         >
                             {statusText}
                         </div>
@@ -230,7 +246,7 @@ export function ControlsPanel({
                                         align="left"
                                     />
                                 </div>
-                                <div className="hud-value">{hudLine.teacher}</div>
+                                <div className="hud-value hud-clock">{hudLine.teacher}</div>
                             </div>
 
                             <div className="hud-item">
@@ -242,7 +258,7 @@ export function ControlsPanel({
                                         align="right"
                                     />
                                 </div>
-                                <div className="hud-value">{hudLine.requests}</div>
+                                <div className="hud-value hud-clock">{hudLine.requests}</div>
                             </div>
 
                             <div className="hud-item hud-span-full">

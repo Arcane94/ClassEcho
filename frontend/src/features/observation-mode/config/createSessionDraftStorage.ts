@@ -1,6 +1,13 @@
 // Local-storage helpers for preserving an in-progress session draft between pages.
 export type JoinCodeMode = "generate" | "custom";
 
+export interface SessionTagDraft {
+  teacherBehaviorTags: string[];
+  functionTags: string[];
+  structureTags: string[];
+  studentTags: string[];
+}
+
 export interface CreateSessionDraft {
   teacherName: string;
   sessionName: string;
@@ -9,6 +16,8 @@ export interface CreateSessionDraft {
   joinCodeMode: JoinCodeMode;
   isDefaultTags: boolean;
   studentIdNumericOnly: boolean;
+  defaultTagDraft?: SessionTagDraft;
+  customTagDraft?: SessionTagDraft;
 }
 
 const CREATE_SESSION_DRAFT_STORAGE_KEY = "observation_create_session_draft";
@@ -45,8 +54,15 @@ export function readCreateSessionDraft(): CreateSessionDraft {
   }
 }
 
-export function saveCreateSessionDraft(draft: CreateSessionDraft) {
-  sessionStorage.setItem(CREATE_SESSION_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+export function saveCreateSessionDraft(draft: Partial<CreateSessionDraft>) {
+  const currentDraft = readCreateSessionDraft();
+  sessionStorage.setItem(
+    CREATE_SESSION_DRAFT_STORAGE_KEY,
+    JSON.stringify({
+      ...currentDraft,
+      ...draft,
+    }),
+  );
 }
 
 export function clearCreateSessionDraft() {

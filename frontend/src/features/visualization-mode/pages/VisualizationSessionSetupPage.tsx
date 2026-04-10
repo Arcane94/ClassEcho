@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import ObservationPanelLayout from "@/features/observation-mode/components/ObservationPanelLayout";
 import { fetchSessionById, type SessionData } from "@/services/fetchSessionById";
+import { InfoTip } from "../components/InfoTip";
 import { SeatingChartEditor } from "../components/SeatingChartEditor";
 import { fetchVisualizationSetup, saveVisualizationSetup } from "../services/visualizationSetup";
 import type { VisualizationScheduleRow, VisualizationSeat } from "../types";
@@ -18,41 +19,50 @@ import {
   isMeaningfulVisualizationScheduleRow,
 } from "../utils/schedule";
 import { getVisualizationBrowserTimeZone, getVisualizationTimeZoneOptions } from "../utils";
+import { useVisualizationStyles } from "../utils/useVisualizationStyles";
 
 const setupFieldClassName =
   "min-h-[2.75rem] w-full min-w-0 rounded-[1rem] border border-[rgba(148,163,184,0.26)] bg-[rgba(255,255,255,0.94)] px-3 py-2 text-sm text-[var(--brand-navy)] outline-none transition focus:border-[var(--accent-color-deep)] focus:ring-2 focus:ring-[rgba(35,171,248,0.16)]";
 const setupSelectFieldClassName = `${setupFieldClassName} appearance-none pr-11`;
 const setupTimeFieldClassName = `${setupFieldClassName} pr-2`;
+const setupFieldLabelTextClassName =
+  "text-[0.72rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--text-muted)]";
 const setupFieldLabelClassName =
   "mb-1.5 block text-[0.72rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--text-muted)]";
 const setupIconButtonClassName =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(148,163,184,0.24)] bg-[rgba(255,255,255,0.96)] text-[var(--brand-navy)] shadow-[0_10px_22px_rgba(15,23,42,0.07)] transition hover:-translate-y-[1px] hover:border-[var(--accent-color-deep)] hover:bg-[rgba(240,249,255,0.98)]";
 const setupIconButtonDangerClassName =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(248,113,113,0.22)] bg-[rgba(255,255,255,0.96)] text-[#b91c1c] shadow-[0_10px_22px_rgba(15,23,42,0.07)] transition hover:-translate-y-[1px] hover:border-[rgba(220,38,38,0.42)] hover:bg-[rgba(254,242,242,0.98)]";
+const setupApplyAllButtonClassName =
+  "observation-button observation-button--accent-solid";
+const setupRowSelectButtonClassName =
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-[0_10px_22px_rgba(15,23,42,0.07)] transition";
 
-function getFallbackScheduleRow(rows: VisualizationScheduleRow[], sharedTimeZone: string): VisualizationScheduleRow {
+function getSharedStudentIdPrefix(rows: VisualizationScheduleRow[]): string {
+  if (rows.length === 0) {
+    return "";
+  }
+
+  const uniquePrefixes = new Set(rows.map((row) => row.student_id_prefix.trim()));
+  return uniquePrefixes.size === 1 ? (rows[0]?.student_id_prefix ?? "").trim() : "";
+}
+
+function getFallbackScheduleRow(
+  rows: VisualizationScheduleRow[],
+  sharedTimeZone: string,
+  sharedStudentIdPrefix: string,
+): VisualizationScheduleRow {
   const lastMeaningfulRow = [...rows].reverse().find(isMeaningfulVisualizationScheduleRow);
   return createVisualizationScheduleRow({
     date: lastMeaningfulRow?.date ?? "",
     period: lastMeaningfulRow?.period ?? "",
+    student_id_prefix: lastMeaningfulRow?.student_id_prefix ?? sharedStudentIdPrefix,
     timezone: sharedTimeZone,
   });
 }
 
-function SeatEditorIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="4" width="14" height="2.75" rx="1.25" />
-      <rect x="5" y="9" width="4" height="4" rx="1.2" />
-      <rect x="10" y="9" width="4" height="4" rx="1.2" />
-      <rect x="15" y="9" width="4" height="4" rx="1.2" />
-      <rect x="7.5" y="16" width="4" height="4" rx="1.2" />
-      <rect x="12.5" y="16" width="4" height="4" rx="1.2" />
-    </svg>
-  );
-}
-
 export default function VisualizationSessionSetupPage() {
+  useVisualizationStyles();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedSessionId = searchParams.get("sessionId")?.trim() ?? "";
@@ -72,6 +82,28 @@ export default function VisualizationSessionSetupPage() {
     [timeZoneOptions],
   );
   const [sharedTimeZone, setSharedTimeZone] = useState(defaultTimeZone);
+  const [sharedStudentIdPrefix, setSharedStudentIdPrefix] = useState("");
+
+  const LabelWithTip = ({
+    label,
+    tip,
+    align = "right",
+  }: {
+    label: string;
+    tip: string;
+    align?: "left" | "center" | "right";
+  }) => (
+    <span className="label-with-tip mb-1.5 inline-flex items-center gap-1.5">
+      <span className={setupFieldLabelTextClassName}>{label}</span>
+      <span
+        className="inline-flex shrink-0 leading-none"
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <InfoTip content={tip} label={`Explain ${label}`} align={align} side="top" />
+      </span>
+    </span>
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +111,7 @@ export default function VisualizationSessionSetupPage() {
     if (!selectedSessionId) {
       setScheduleRows([createVisualizationScheduleRow({ timezone: defaultTimeZone })]);
       setSharedTimeZone(defaultTimeZone);
+      setSharedStudentIdPrefix("");
       setActiveEditorRowId(null);
       setLoadingSetup(false);
       setSetupError("Choose a session first.");
@@ -106,6 +139,7 @@ export default function VisualizationSessionSetupPage() {
           }),
         );
         setSharedTimeZone(nextTimeZone);
+        setSharedStudentIdPrefix(getSharedStudentIdPrefix(nextRows));
         setScheduleRows(nextRows);
         setActiveEditorRowId((current) => {
           if (current && nextRows.some((row) => row.id === current)) {
@@ -119,6 +153,7 @@ export default function VisualizationSessionSetupPage() {
         if (!cancelled) {
           setScheduleRows([createVisualizationScheduleRow({ timezone: defaultTimeZone })]);
           setSharedTimeZone(defaultTimeZone);
+          setSharedStudentIdPrefix("");
           setActiveEditorRowId(null);
           setSetupError("We couldn't load this session setup right now.");
         }
@@ -165,7 +200,7 @@ export default function VisualizationSessionSetupPage() {
 
   const updateScheduleRow = (
     rowId: string,
-    field: keyof Pick<VisualizationScheduleRow, "date" | "period" | "start_time" | "end_time">,
+    field: keyof Pick<VisualizationScheduleRow, "date" | "period" | "student_id_prefix" | "start_time" | "end_time">,
     value: string,
   ) => {
     setScheduleRows((previous) =>
@@ -212,10 +247,11 @@ export default function VisualizationSessionSetupPage() {
     setScheduleRows((previous) => {
       const nextRow =
         afterRowId == null
-          ? getFallbackScheduleRow(previous, sharedTimeZone)
+          ? getFallbackScheduleRow(previous, sharedTimeZone, sharedStudentIdPrefix)
           : createVisualizationScheduleRow({
             date: previous.find((row) => row.id === afterRowId)?.date ?? "",
             period: previous.find((row) => row.id === afterRowId)?.period ?? "",
+            student_id_prefix: previous.find((row) => row.id === afterRowId)?.student_id_prefix ?? sharedStudentIdPrefix,
             timezone: sharedTimeZone,
           });
 
@@ -240,7 +276,7 @@ export default function VisualizationSessionSetupPage() {
   const removeScheduleRow = (rowId: string) => {
     setScheduleRows((previous) => {
       if (previous.length <= 1) {
-        const nextRow = createVisualizationScheduleRow({ timezone: sharedTimeZone });
+        const nextRow = createVisualizationScheduleRow({ timezone: sharedTimeZone, student_id_prefix: sharedStudentIdPrefix });
         setActiveEditorRowId(nextRow.id);
         return [nextRow];
       }
@@ -257,12 +293,28 @@ export default function VisualizationSessionSetupPage() {
     setSetupNotice(null);
   };
 
+  const applyStudentIdPrefixToAllRows = () => {
+    setScheduleRows((previous) =>
+      previous.map((row) =>
+        createVisualizationScheduleRow({
+          ...row,
+          student_id_prefix: sharedStudentIdPrefix,
+        }),
+      ),
+    );
+    setSetupNotice(null);
+  };
+
   const rowErrors = useMemo(() => getVisualizationScheduleRowErrors(scheduleRows), [scheduleRows]);
   const validScheduleRows = useMemo(() => getValidVisualizationScheduleRows(scheduleRows), [scheduleRows]);
   const configuredScheduleCount = countConfiguredVisualizationScheduleRows(scheduleRows);
   const configuredSeatCount = countConfiguredVisualizationSeatMaps(scheduleRows);
   const windowsMissingSeats = validScheduleRows.filter((row) => !hasConfiguredVisualizationSeats(row)).length;
   const hasScheduleErrors = Object.keys(rowErrors).length > 0;
+  const hasMixedStudentIdPrefixes = useMemo(() => {
+    const uniquePrefixes = new Set(scheduleRows.map((row) => row.student_id_prefix.trim()));
+    return uniquePrefixes.size > 1;
+  }, [scheduleRows]);
   const canOpenVisualization = validScheduleRows.length > 0 && windowsMissingSeats === 0 && !hasScheduleErrors;
   const setupStatus = useMemo(() => {
     if (configuredScheduleCount === 0) {
@@ -332,6 +384,7 @@ export default function VisualizationSessionSetupPage() {
         }),
       );
       setSharedTimeZone(nextTimeZone);
+      setSharedStudentIdPrefix(getSharedStudentIdPrefix(nextRows));
       setScheduleRows(nextRows);
       setActiveEditorRowId((current) => {
         if (current && nextRows.some((row) => row.id === current)) {
@@ -361,23 +414,26 @@ export default function VisualizationSessionSetupPage() {
       onBack={() => navigate("/visualization")}
       backIcon="arrow"
       width="wide"
+      bodyClassName="min-w-0"
     >
-      <div className="grid gap-4 sm:gap-5">
-        <section className="rounded-[1.5rem] border border-[rgba(148,163,184,0.2)] bg-[rgba(255,255,255,0.9)] p-4 shadow-[0_16px_34px_rgba(15,23,42,0.06)] sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-[var(--brand-navy)]">Replay windows</h3>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                Add one row for each date and period you want to replay, then define its seating chart below.
-              </p>
-            </div>
+      <div className="grid min-w-0 gap-4 sm:gap-5">
+        <section className="visualization-setup-primary-card min-w-0 rounded-[1.5rem] border border-[rgba(148,163,184,0.2)] bg-[rgba(255,255,255,0.9)] p-4 shadow-[0_16px_34px_rgba(15,23,42,0.06)] sm:p-5">
+          <div>
+            <h3 className="text-base font-semibold text-[var(--brand-navy)]">Replay windows</h3>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+              Add one row for each date and period you want to replay, then click a row to edit its seating chart below.
+            </p>
+          </div>
 
-            <label className="block min-w-0 sm:w-[15rem]">
-              <span className={setupFieldLabelClassName}>
-                Time zone
-              </span>
+          <div className="mt-4 grid gap-3 rounded-[1.2rem] border border-[rgba(148,163,184,0.18)] bg-[rgba(255,255,255,0.82)] p-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,13.5rem)_minmax(0,1fr)_auto] 2xl:items-end">
+            <div className="block min-w-0">
+              <LabelWithTip
+                label="Time zone"
+                tip="Timezone of the location the observation took place."
+              />
               <div className="relative">
                 <select
+                  aria-label="Time zone"
                   className={setupSelectFieldClassName}
                   value={sharedTimeZone}
                   onChange={(event) => updateSharedTimeZone(event.target.value)}
@@ -394,7 +450,45 @@ export default function VisualizationSessionSetupPage() {
                   </svg>
                 </span>
               </div>
-            </label>
+            </div>
+
+            <div className="relative min-w-0">
+              <span
+                className="pointer-events-none absolute bottom-[0.2rem] left-0 top-[1.55rem] hidden w-px rounded-full bg-[linear-gradient(180deg,rgba(148,163,184,0.08)_0%,rgba(148,163,184,0.36)_50%,rgba(148,163,184,0.08)_100%)] 2xl:block"
+                aria-hidden="true"
+              />
+              <div className="block min-w-0 2xl:pl-5">
+                <LabelWithTip
+                  label="Student ID Prefix"
+                  tip='Optional. Only used for SnapClass student code snapshots. Example: "G2L" makes student 132 become G2L132.'
+                />
+                <input
+                  type="text"
+                  aria-label="Student ID Prefix"
+                  className={setupFieldClassName}
+                  value={sharedStudentIdPrefix}
+                  onChange={(event) => setSharedStudentIdPrefix(event.target.value)}
+                  placeholder="Optional, e.g. G2L"
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+
+              <button
+                type="button"
+                className={`${setupApplyAllButtonClassName} observation-button--setup-rounded w-full justify-center md:col-span-2 2xl:col-span-1 2xl:w-auto 2xl:justify-self-end`}
+                onClick={applyStudentIdPrefixToAllRows}
+                disabled={loadingSetup || !canEditVisualization}
+              >
+              Apply to all periods
+            </button>
+
+            {hasMixedStudentIdPrefixes ? (
+              <div className="text-sm leading-6 text-[var(--text-muted)] md:col-span-2 2xl:col-span-3">
+                Periods currently use different prefixes; applying here will overwrite them.
+              </div>
+            ) : null}
           </div>
 
           {loadingSetup || sessionDetailsLoading ? (
@@ -409,35 +503,41 @@ export default function VisualizationSessionSetupPage() {
             <div className="mt-4 rounded-[1.25rem] border border-[rgba(148,163,184,0.22)] bg-[rgba(247,250,252,0.92)]">
               {scheduleRows.map((row, index) => {
                 const isActive = activeReplayWindow?.id === row.id;
-                const hasSeats = row.seats.length > 0;
 
                 return (
                   <div
                     key={row.id}
-                    className={`${index === 0 ? "" : "border-t border-[rgba(148,163,184,0.18)]"} px-3 py-4 sm:px-4`}
+                    className={`${index === 0 ? "" : "border-t border-[rgba(148,163,184,0.18)]"} cursor-pointer px-3 py-4 transition sm:px-4 ${
+                      isActive
+                        ? "bg-[rgba(224,242,254,0.45)]"
+                        : "hover:bg-[rgba(255,255,255,0.62)]"
+                    }`}
+                    onClick={() => setActiveEditorRowId(row.id)}
                   >
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[8.75rem_minmax(9.5rem,1fr)_4.5rem_8.75rem_8.75rem_auto] xl:items-end">
-                      <div className="flex min-w-0 flex-col">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end xl:flex-nowrap">
+                      <div className="flex min-w-0 flex-col items-start sm:flex-none sm:order-1 xl:order-none xl:self-end">
                         <span className={`${setupFieldLabelClassName} invisible`} aria-hidden="true">
-                          Seats
+                          Select
                         </span>
                         <button
                           type="button"
-                          className={`inline-flex min-h-[2.75rem] min-w-0 items-center justify-center gap-2 rounded-[1rem] border px-3 py-2 text-sm font-semibold shadow-[0_10px_22px_rgba(15,23,42,0.07)] transition ${
+                          className={`${setupRowSelectButtonClassName} ${
                             isActive
                               ? "border-[var(--accent-color-deep)] bg-[rgba(224,242,254,0.96)] text-[var(--accent-color-deep)]"
-                              : "border-[rgba(148,163,184,0.24)] bg-[rgba(255,255,255,0.96)] text-[var(--brand-navy)] hover:-translate-y-[1px] hover:border-[var(--accent-color-deep)] hover:bg-[rgba(240,249,255,0.98)]"
+                              : "border-[rgba(148,163,184,0.24)] bg-[rgba(255,255,255,0.96)] text-[var(--text-muted)] hover:-translate-y-[1px] hover:border-[var(--accent-color-deep)] hover:bg-[rgba(240,249,255,0.98)] hover:text-[var(--accent-color-deep)]"
                           }`}
-                          onClick={() => setActiveEditorRowId(row.id)}
-                          title={hasSeats ? `${row.seats.length} seats defined. Open seating chart editor.` : "Open seating chart editor"}
-                          aria-label={hasSeats ? `${row.seats.length} seats defined. Open seating chart editor.` : "Open seating chart editor"}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setActiveEditorRowId(row.id);
+                          }}
+                          title="Select this replay window"
+                          aria-label="Select this replay window"
                         >
-                          <SeatEditorIcon />
-                          <span className="whitespace-nowrap">Seating chart</span>
+                          <ArrowRight className={`h-4 w-4 ${isActive ? "translate-x-[1px]" : ""}`} />
                         </button>
                       </div>
 
-                      <label className="block min-w-0">
+                      <label className="block min-w-0 sm:min-w-[10.25rem] sm:flex-[1.15_1_10.25rem] sm:order-1 xl:min-w-[9.25rem] xl:flex-[1.05_1_9.25rem] xl:order-none">
                         <span className={setupFieldLabelClassName}>
                           Date
                         </span>
@@ -450,7 +550,7 @@ export default function VisualizationSessionSetupPage() {
                         />
                       </label>
 
-                      <label className="block min-w-0">
+                      <label className="block min-w-0 sm:w-[4.5rem] sm:flex-none sm:order-1 xl:w-[4.25rem] xl:order-none">
                         <span className={setupFieldLabelClassName}>
                           Period
                         </span>
@@ -465,7 +565,7 @@ export default function VisualizationSessionSetupPage() {
                         />
                       </label>
 
-                      <label className="block min-w-0">
+                      <label className="block min-w-0 sm:min-w-[9rem] sm:flex-[1_1_9rem] sm:order-1 xl:min-w-[8.5rem] xl:flex-[0.95_1_8.5rem] xl:order-none">
                         <span className={setupFieldLabelClassName}>
                           Start time
                         </span>
@@ -479,7 +579,7 @@ export default function VisualizationSessionSetupPage() {
                         />
                       </label>
 
-                      <label className="block min-w-0">
+                      <label className="block min-w-0 sm:min-w-[8.75rem] sm:flex-[1_1_8.75rem] sm:order-2 xl:min-w-[8.5rem] xl:flex-[0.95_1_8.5rem] xl:order-none">
                         <span className={setupFieldLabelClassName}>
                           End time
                         </span>
@@ -493,11 +593,33 @@ export default function VisualizationSessionSetupPage() {
                         />
                       </label>
 
-                      <div className="flex items-end justify-end gap-2 sm:col-span-2 xl:col-span-1">
+                      <div className="block min-w-0 sm:min-w-[8rem] sm:flex-[0.95_1_8rem] sm:order-2 xl:min-w-[6.25rem] xl:flex-[0.8_1_6.25rem] xl:order-none">
+                        <LabelWithTip
+                          label="ID Prefix"
+                          tip='Optional. Only used for SnapClass student code snapshots. Example: "G2L" makes student 132 become G2L132.'
+                          align="right"
+                        />
+                        <input
+                          type="text"
+                          aria-label="ID Prefix"
+                          className={setupFieldClassName}
+                          value={row.student_id_prefix}
+                          onChange={(event) => updateScheduleRow(row.id, "student_id_prefix", event.target.value)}
+                          onFocus={() => setActiveEditorRowId(row.id)}
+                          placeholder="Optional"
+                          spellCheck={false}
+                          autoComplete="off"
+                        />
+                      </div>
+
+                      <div className="flex items-end justify-start gap-2 sm:ml-auto sm:flex-none sm:justify-end sm:order-2 xl:order-none xl:self-end">
                         <button
                           type="button"
                           className={setupIconButtonClassName}
-                          onClick={() => addScheduleRow(row.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            addScheduleRow(row.id);
+                          }}
                           title="Add replay window"
                           aria-label="Add replay window"
                         >
@@ -507,7 +629,10 @@ export default function VisualizationSessionSetupPage() {
                         <button
                           type="button"
                           className={setupIconButtonDangerClassName}
-                          onClick={() => removeScheduleRow(row.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeScheduleRow(row.id);
+                          }}
                           title={`Remove replay window ${index + 1}`}
                           aria-label={`Remove replay window ${index + 1}`}
                         >
@@ -528,11 +653,13 @@ export default function VisualizationSessionSetupPage() {
           )}
         </section>
 
-        <SeatingChartEditor
-          replayWindow={activeReplayWindow}
-          replayWindows={scheduleRows}
-          onChangeSeats={updateScheduleRowSeats}
-        />
+        <div className="visualization-setup-primary-card">
+          <SeatingChartEditor
+            replayWindow={activeReplayWindow}
+            replayWindows={scheduleRows}
+            onChangeSeats={updateScheduleRowSeats}
+          />
+        </div>
       </div>
 
       {setupError ? (
@@ -547,16 +674,16 @@ export default function VisualizationSessionSetupPage() {
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-3 rounded-[1.5rem] border border-[rgba(35,171,248,0.18)] bg-[rgba(255,255,255,0.88)] p-4 shadow-[0_14px_30px_rgba(14,76,113,0.08)] md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <div className="mt-6 grid gap-3 rounded-[1.5rem] border border-[rgba(35,171,248,0.18)] bg-[rgba(255,255,255,0.88)] p-4 shadow-[0_14px_30px_rgba(14,76,113,0.08)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="flex min-h-[3rem] flex-col justify-center text-sm leading-6 text-[var(--text-muted)]">
           <div>{setupStatus.headline}</div>
           {setupStatus.detail ? <div>{setupStatus.detail}</div> : null}
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:justify-self-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-self-end">
           <button
             type="button"
-            className="observation-button"
+            className="observation-button observation-button--setup-rounded"
             onClick={() => persistSetup(false)}
             disabled={savingSetup || loadingSetup || hasScheduleErrors || !canEditVisualization}
           >
@@ -566,7 +693,7 @@ export default function VisualizationSessionSetupPage() {
 
           <button
             type="button"
-            className="observation-button observation-button--accent"
+            className="observation-button observation-button--accent-solid observation-button--setup-rounded"
             onClick={() => persistSetup(true)}
             disabled={!canOpenVisualization || savingSetup || loadingSetup || !canEditVisualization}
           >
@@ -578,4 +705,3 @@ export default function VisualizationSessionSetupPage() {
     </ObservationPanelLayout>
   );
 }
-

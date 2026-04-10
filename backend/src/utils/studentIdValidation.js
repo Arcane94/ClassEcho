@@ -2,6 +2,10 @@ function isNumericOnlyEnabled(value) {
   return value === true || value === 1 || value === '1';
 }
 
+function normalizeNumericStudentIdSegment(segment) {
+  return String(segment).replace(/^0+(?=\d)/, '');
+}
+
 function isValidNumericStudentIdValue(value) {
   if (value === undefined || value === null) {
     return true;
@@ -25,7 +29,14 @@ function normalizeNumericStudentIdValue(value) {
     return null;
   }
 
-  return trimmedValue.replace(/\s+/g, '');
+  const normalizedValue = trimmedValue
+    .split(',')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map(normalizeNumericStudentIdSegment)
+    .join(',');
+
+  return normalizedValue || null;
 }
 
 module.exports = {

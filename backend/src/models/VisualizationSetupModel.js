@@ -51,6 +51,7 @@ async function getSetupBySessionIdWithDb(dbOrTrx, sessionId) {
       'session_dates.observation_date',
       'session_periods.session_period_id',
       'session_periods.period_label',
+      'session_periods.student_id_prefix',
       'session_periods.time_zone',
       'session_periods.start_time',
       'session_periods.end_time',
@@ -112,6 +113,7 @@ async function getSetupBySessionIdWithDb(dbOrTrx, sessionId) {
       session_period_id: row.session_period_id,
       date: formatDateOnly(row.observation_date),
       period: String(row.period_label || ''),
+      student_id_prefix: row.student_id_prefix ? String(row.student_id_prefix).trim() : '',
       timezone: row.time_zone ? String(row.time_zone) : EASTERN_TIME_ZONE,
       start_time: formatTimeOnly(row.start_time),
       end_time: formatTimeOnly(row.end_time),
@@ -138,6 +140,7 @@ exports.replaceSetup = async function replaceSetup(sessionId, replayWindows) {
     for (const replayWindow of replayWindows) {
       const observationDate = String(replayWindow.date || '').trim();
       const periodLabel = String(replayWindow.period || '').trim();
+      const studentIdPrefix = String(replayWindow.student_id_prefix || '').trim();
       const timeZone = String(replayWindow.timezone || '').trim() || EASTERN_TIME_ZONE;
       const startTime = String(replayWindow.start_time || '').trim();
       const endTime = String(replayWindow.end_time || '').trim();
@@ -155,6 +158,7 @@ exports.replaceSetup = async function replaceSetup(sessionId, replayWindows) {
       const insertedPeriodIds = await trx(SESSION_PERIODS_TABLE).insert({
         session_date_id: sessionDateId,
         period_label: periodLabel,
+        student_id_prefix: studentIdPrefix || null,
         time_zone: timeZone,
         start_time: startTime,
         end_time: endTime,

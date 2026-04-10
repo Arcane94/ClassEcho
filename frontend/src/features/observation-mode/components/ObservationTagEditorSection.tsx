@@ -1,5 +1,5 @@
 // Section editor for adding, removing, and reorganizing tags tied to a session.
-import { Plus, RotateCcw, X } from "lucide-react";
+import { Plus, RotateCcw, Trash2, X } from "lucide-react";
 
 import ObservationInfoButton from "@/features/observation-mode/components/ObservationInfoButton";
 
@@ -12,6 +12,8 @@ interface ObservationTagEditorSectionProps {
   addLabel?: string;
   onResetToDefault?: () => void;
   resetLabel?: string;
+  onClearTags?: () => void;
+  clearLabel?: string;
   onRemove: (tag: string) => void;
   onEdit?: (tag: string) => void;
   infoText?: string;
@@ -26,10 +28,27 @@ export default function ObservationTagEditorSection({
   addLabel = "Add tag",
   onResetToDefault,
   resetLabel = "Reset",
+  onClearTags,
+  clearLabel = "Clear",
   onRemove,
   onEdit,
   infoText,
 }: ObservationTagEditorSectionProps) {
+  const secondaryAction = onClearTags
+    ? {
+        label: clearLabel,
+        onClick: onClearTags,
+        icon: Trash2,
+      }
+    : onResetToDefault
+      ? {
+          label: resetLabel,
+          onClick: onResetToDefault,
+          icon: RotateCcw,
+        }
+      : null;
+  const SecondaryActionIcon = secondaryAction?.icon ?? RotateCcw;
+
   return (
     <section className="observation-editor-section">
       <div className="observation-editor-section-header">
@@ -46,15 +65,15 @@ export default function ObservationTagEditorSection({
               <Plus className="h-4 w-4" />
               {addLabel}
             </button>
-            {onResetToDefault && (
+            {secondaryAction && (
               <button
                 type="button"
                 className="observation-inline-button observation-inline-button--reset-inline"
-                onClick={onResetToDefault}
-                aria-label={`${resetLabel} for ${title}`}
+                onClick={secondaryAction.onClick}
+                aria-label={`${secondaryAction.label} for ${title}`}
               >
-                <RotateCcw className="h-4 w-4" />
-                {resetLabel}
+                <SecondaryActionIcon className="h-4 w-4" />
+                {secondaryAction.label}
               </button>
             )}
           </div>
@@ -65,14 +84,30 @@ export default function ObservationTagEditorSection({
       <div className="observation-chip-wrap">
         {tags.length === 0 && <p className="observation-empty-inline">No tags added yet.</p>}
 
-        {tags.map((tag) => (
-          <div key={tag} className={`observation-editor-chip observation-editor-chip--${tone}`}>
+        {tags.map((tag) => {
+          const isLongTag = tag.length > 48;
+
+          return (
+            <div
+              key={tag}
+              className={`observation-editor-chip observation-editor-chip--${tone}${isLongTag ? " observation-editor-chip--long" : ""}`}
+            >
             {onEdit ? (
-              <button type="button" className="observation-editor-chip-label" onClick={() => onEdit(tag)}>
+              <button
+                type="button"
+                className={`observation-editor-chip-label${isLongTag ? " observation-editor-chip-label--long" : ""}`}
+                onClick={() => onEdit(tag)}
+                title={tag}
+              >
                 {tag}
               </button>
             ) : (
-              <span className="observation-editor-chip-label">{tag}</span>
+              <span
+                className={`observation-editor-chip-label${isLongTag ? " observation-editor-chip-label--long" : ""}`}
+                title={tag}
+              >
+                {tag}
+              </span>
             )}
 
             <button
@@ -83,10 +118,10 @@ export default function ObservationTagEditorSection({
             >
               <X className="h-4 w-4" />
             </button>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
 }
-
