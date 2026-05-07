@@ -34,14 +34,17 @@ export type VisualizationScheduleRow = {
     seats: VisualizationSeat[];
 };
 
+export type LogTagSection = {
+    key: string;
+    label: string;
+    tags: string;
+};
+
 export type HelpRow = {
     student_id: string;
     start_time: Date;
     end_time: Date;
-    behavior_tags: string;
-    function_tags?: string;
-    structure_tags?: string;
-    custom_tags?: string;
+    tag_sections: LogTagSection[];
     note?: string;
     location?: string;
 
@@ -54,7 +57,7 @@ export type RequestRow = {
     student_id: string;
     start_time: Date;
     end_time: Date;
-    behavior_tags: string;
+    tag_sections: LogTagSection[];
     affect?: string;
     on_task?: string | number | boolean;
     note?: string;
@@ -69,10 +72,7 @@ export type TeacherLog = {
     student_id: string;
     start: string;       // ISO for math
     end: string;         // ISO for math
-    behavior_tags: string;
-    function_tags?: string;
-    structure_tags?: string;
-    custom_tags?: string;
+    tag_sections: LogTagSection[];
     note?: string;
     location?: string;
 
@@ -85,7 +85,7 @@ export type StudentLog = {
     student_id: string;
     start: string;       // ISO for math
     end: string;         // ISO for math
-    behavior_tags: string;
+    tag_sections: LogTagSection[];
     affect?: string;
     on_task?: string;
     note?: string;
@@ -150,36 +150,49 @@ export type GroupPayload = {
     student_logs?: StudentLog[];
 };
 
-export type FilterKey =
-    | "student"
-    | "structure"
-    | "behavior"
-    | "function"
-    | "affect"
-    | "emoji"
-    | "location"
-    | "note";
+export type LogFilterKey = string;
+export type LogFilters = Partial<Record<LogFilterKey, string[]>>;
 
-export type LogFilters = Partial<Record<FilterKey, string[]>>;
+export interface LogFilterDefinition {
+    key: LogFilterKey;
+    label: string;
+    placeholder: string;
+}
 
-export const FILTER_LABELS: Record<FilterKey, string> = {
-    student: "Student",
-    structure: "Structure",
-    behavior: "Behavior",
-    function: "Function",
-    affect: "Affect",
-    emoji: "Emoji",
-    location: "Location",
-    note: "Notes",
-};
+export const SECTION_FILTER_KEY_PREFIX = "section:";
 
-export const FILTER_PLACEHOLDERS: Record<FilterKey, string> = {
-    student: "Type an ID and press Enter (e.g., 11)",
-    structure: "Type a tag and press Enter (e.g., Variables)",
-    behavior: "Type a tag and press Enter (e.g., Collaboration)",
-    function: "Type a tag and press Enter (e.g., Help)",
-    affect: "Type an affect and press Enter (e.g., excited)",
-    emoji: "Type an emoji key and press Enter (e.g., happy)",
-    location: "Type a location and press Enter (e.g., Front)",
-    note: "Type text and press enter (e.g., gossip with peers)"
-};
+export function getSectionFilterKey(sectionLabel: string): LogFilterKey {
+    return `${SECTION_FILTER_KEY_PREFIX}${sectionLabel.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+}
+
+export function isSectionFilterKey(key: string): boolean {
+    return key.startsWith(SECTION_FILTER_KEY_PREFIX);
+}
+
+export const BASE_LOG_FILTER_DEFINITIONS: LogFilterDefinition[] = [
+    {
+        key: "student",
+        label: "Student",
+        placeholder: "Type an ID and press Enter (e.g., 11)",
+    },
+    {
+        key: "affect",
+        label: "Affect",
+        placeholder: "Type an affect and press Enter (e.g., excited)",
+    },
+    {
+        key: "emoji",
+        label: "Emoji",
+        placeholder: "Type an emoji key and press Enter (e.g., happy)",
+    },
+    {
+        key: "location",
+        label: "Location",
+        placeholder: "Type a location and press Enter (e.g., Front)",
+    },
+    {
+        key: "note",
+        label: "Notes",
+        placeholder: "Type text and press Enter (e.g., peer collaboration)",
+    },
+];

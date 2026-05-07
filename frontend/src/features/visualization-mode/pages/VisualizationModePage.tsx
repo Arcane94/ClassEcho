@@ -13,16 +13,20 @@ import { InfoTip } from "../components/InfoTip";
 import { UploadChip } from "../components/UploadChip";
 
 import type {
+  LogFilterDefinition,
+  LogFilterKey,
   EmojiReactionEvent,
   EmojiReactionInterval,
   GroupPayload,
   HelpRow,
   RequestRow,
   VisualizationScheduleRow,
-  FilterKey,
   LogFilters,
 } from "../types";
-import { FILTER_LABELS, FILTER_PLACEHOLDERS } from "../types";
+import {
+  BASE_LOG_FILTER_DEFINITIONS,
+  getSectionFilterKey,
+} from "../types";
 import {
   buildGroups,
   parseDateOnly,
@@ -173,8 +177,12 @@ export default function VisualizationModePage() {
   const [studentViewId, setStudentViewId] = useState<string | null>(null);
 
   const [logFilters, setLogFilters] = useState<LogFilters>({});
-  const [activeFilterKey, setActiveFilterKey] = useState<FilterKey>("student");
+  const [activeFilterKey, setActiveFilterKey] = useState<LogFilterKey>("student");
   const [filterDraft, setFilterDraft] = useState<string>("");
+  const current = useMemo(() => {
+    if (!groups || !selectedDate || !period || selectedDate === ALL_DATES) return null;
+    return groups[`${selectedDate} | ${period}`] ?? null;
+  }, [groups, selectedDate, period]);
 
   // iSnap cache
   const [codeUrlCache, setCodeUrlCache] = useState<Record<string, any[]>>({});
@@ -378,7 +386,7 @@ export default function VisualizationModePage() {
     loadSelectedSessionSetup();
   }, [loadSelectedSessionSetup]);
 
-  const removeFilterValue = (key: FilterKey, value: string) => {
+  const removeFilterValue = (key: LogFilterKey, value: string) => {
     setLogFilters((prev) => {
       const next: LogFilters = { ...prev };
       const arr = (next[key] ?? []).filter((v) => v !== value);
@@ -392,7 +400,7 @@ export default function VisualizationModePage() {
     }
   };
 
-  const addFilterValue = (key: FilterKey, raw: string) => {
+  const addFilterValue = (key: LogFilterKey, raw: string) => {
     const value = raw.trim();
     if (!value) return;
 
@@ -404,19 +412,104 @@ export default function VisualizationModePage() {
     });
   };
 
+  const availableLogFilterDefinitions = useMemo<LogFilterDefinition[]>(() => {
+    if (!current) {
+      return BASE_LOG_FILTER_DEFINITIONS.filter((definition) => definition.key === "student");
+    }
+
+    const definitions: LogFilterDefinition[] = [];
+    const byKey = new Map<LogFilterKey, LogFilterDefinition>();
+    const combinedLogs = [
+      ...(current.teacher_logs ?? []),
+      ...(current.student_logs ?? []),
+    ];
+
+    const addDefinition = (definition: LogFilterDefinition) => {
+      if (!byKey.has(definition.key)) {
+        byKey.set(definition.key, definition);
+        definitions.push(definition);
+      }
+    };
+
+    if (combinedLogs.some((log) => log.student_id.trim() !== "") || Object.keys(emojiReactionsByStudent).length > 0) {
+      const studentDefinition = BASE_LOG_FILTER_DEFINITIONS.find((definition) => definition.key === "student");
+      if (studentDefinition) {
+        addDefinition(studentDefinition);
+      }
+    }
+
+    combinedLogs.forEach((log) => {
+      (log.tag_sections ?? []).forEach((section) => {
+        if (!section.tags.trim()) {
+          return;
+        }
+
+        addDefinition({
+          key: section.key || getSectionFilterKey(section.label),
+          label: section.label,
+          placeholder: `Type a ${section.label.toLowerCase()} tag and press Enter`,
+        });
+      });
+    });
+
+    BASE_LOG_FILTER_DEFINITIONS
+      .filter((definition) => definition.key !== "student")
+      .forEach((definition) => {
+        if (
+          (definition.key === "affect" && (current.student_logs ?? []).some((log) => (log.affect ?? "").trim() !== ""))
+          || (definition.key === "emoji" && Object.values(emojiReactionsByStudent).some((intervals) => intervals.length > 0))
+          || (definition.key === "location" && combinedLogs.some((log) => (log.location ?? "").trim() !== ""))
+          || (definition.key === "note" && combinedLogs.some((log) => (log.note ?? "").trim() !== ""))
+        ) {
+          addDefinition(definition);
+        }
+      });
+
+    return definitions;
+  }, [current, emojiReactionsByStudent]);
+
+  const filterLabelByKey = useMemo(
+    () => availableLogFilterDefinitions.reduce<Record<string, string>>((labels, definition) => {
+      labels[definition.key] = definition.label;
+      return labels;
+    }, {}),
+    [availableLogFilterDefinitions],
+  );
+
+  const filterPlaceholderByKey = useMemo(
+    () => availableLogFilterDefinitions.reduce<Record<string, string>>((placeholders, definition) => {
+      placeholders[definition.key] = definition.placeholder;
+      return placeholders;
+    }, {}),
+    [availableLogFilterDefinitions],
+  );
+
   const appliedFilterEntries = useMemo(() => {
-    const entries: Array<{ key: FilterKey; value: string }> = [];
-    (Object.keys(FILTER_LABELS) as FilterKey[]).forEach((k) => {
-      (logFilters[k] ?? []).forEach((v) => entries.push({ key: k, value: v }));
+    const entries: Array<{ key: LogFilterKey; value: string }> = [];
+    availableLogFilterDefinitions.forEach((definition) => {
+      (logFilters[definition.key] ?? []).forEach((value) => {
+        entries.push({ key: definition.key, value });
+      });
     });
     return entries;
-  }, [logFilters]);
+  }, [availableLogFilterDefinitions, logFilters]);
 
-  const filterTabRows = useMemo(() => {
-    const keys = Object.keys(FILTER_LABELS) as FilterKey[];
-    const midpoint = Math.ceil(keys.length / 2);
-    return [keys.slice(0, midpoint), keys.slice(midpoint)];
-  }, []);
+  useEffect(() => {
+    const validKeys = new Set(availableLogFilterDefinitions.map((definition) => definition.key));
+
+    setLogFilters((prev) => {
+      const next = Object.fromEntries(
+        Object.entries(prev).filter(([key]) => validKeys.has(key)),
+      );
+
+      return Object.keys(next).length === Object.keys(prev).length ? prev : next;
+    });
+
+    if (!validKeys.has(activeFilterKey)) {
+      setActiveFilterKey(availableLogFilterDefinitions[0]?.key ?? "student");
+      setFilterDraft("");
+    }
+  }, [activeFilterKey, availableLogFilterDefinitions]);
 
   function compareDateStrings(a: string, b: string) {
     const aMs = parseDateOnly(a)?.getTime();
@@ -482,11 +575,6 @@ export default function VisualizationModePage() {
 
     setIsnapReloadToken(0);
   }, [configuredReplayWindows, activeHelpRows, activeRequestRows]);
-
-  const current = useMemo(() => {
-    if (!groups || !selectedDate || !period || selectedDate === ALL_DATES) return null;
-    return groups[`${selectedDate} | ${period}`] ?? null;
-  }, [groups, selectedDate, period]);
 
   useEffect(() => {
     if (!selectedSessionId || !current) {
@@ -1168,72 +1256,74 @@ export default function VisualizationModePage() {
                   <div className="log-filterbar-head">
                     <div className="log-filterbar-title">Filters</div>
                     <InfoTip
-                      content="Use these tabs and search field to filter the log list by student, tags, affect, location, or note text."
+                      content="Filter the log list by the categories and fields available in the current session window."
                       label="Explain filters"
                       align="right"
                     />
                   </div>
 
-                  <div className="filter-tabs" role="tablist" aria-label="Log filters">
-                    {filterTabRows.map((row, rowIdx) => (
-                        <div key={rowIdx} className="filter-tabs-row">
-                          {row.map((k) => (
-                              <button
-                                  key={k}
-                                  type="button"
-                                  className={`filter-tab ${activeFilterKey === k ? "filter-tab-active" : ""}`}
-                                  onClick={() => {
-                                    setActiveFilterKey(k);
-                                    setFilterDraft("");
-                                  }}
-                              >
-                                {FILTER_LABELS[k]}
-                              </button>
-                          ))}
-                        </div>
-                    ))}
-                  </div>
+                  {availableLogFilterDefinitions.length > 0 ? (
+                    <>
+                      <div className="filter-tabs" role="tablist" aria-label="Log filters">
+                        {availableLogFilterDefinitions.map((definition) => (
+                            <button
+                                key={definition.key}
+                                type="button"
+                                className={`filter-tab ${activeFilterKey === definition.key ? "filter-tab-active" : ""}`}
+                                onClick={() => {
+                                  setActiveFilterKey(definition.key);
+                                  setFilterDraft("");
+                                }}
+                            >
+                              {definition.label}
+                            </button>
+                        ))}
+                      </div>
 
-                  <div className="filter-input-row">
-                    <input
-                        className="log-filter-input"
-                        value={filterDraft}
-                        placeholder={FILTER_PLACEHOLDERS[activeFilterKey]}
-                        onChange={(e) => setFilterDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addFilterValue(activeFilterKey, filterDraft);
-                            setFilterDraft("");
-                          }
-                        }}
-                        aria-label={`Add ${FILTER_LABELS[activeFilterKey]} filter`}
-                    />
-
-                    {appliedFilterEntries.length > 0 && (
-                        <button
-                            type="button"
-                            className="filter-clear-all"
-                            onClick={() => {
-                              clearAllFilters();
-                              setStudentViewId(null);
+                      <div className="filter-input-row">
+                        <input
+                            className="log-filter-input"
+                            value={filterDraft}
+                            placeholder={filterPlaceholderByKey[activeFilterKey] ?? "Type a filter and press Enter"}
+                            onChange={(e) => setFilterDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addFilterValue(activeFilterKey, filterDraft);
+                                setFilterDraft("");
+                              }
                             }}
-                        >
-                          Clear all
-                        </button>
-                    )}
-                  </div>
+                            aria-label={`Add ${filterLabelByKey[activeFilterKey] ?? "log"} filter`}
+                        />
+
+                        {appliedFilterEntries.length > 0 && (
+                            <button
+                                type="button"
+                                className="filter-clear-all"
+                                onClick={() => {
+                                  clearAllFilters();
+                                  setStudentViewId(null);
+                                }}
+                            >
+                              Clear all
+                            </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="log-empty">No filters available for this session yet.</div>
+                  )}
 
                   {appliedFilterEntries.length > 0 && (
                       <div className="applied-filters" aria-label="Applied filters">
                         {appliedFilterEntries.map(({ key, value }, idx) => (
                             <span key={`${key}:${value}:${idx}`} className="filter-pill">
-                        <span className="filter-pill-label">{FILTER_LABELS[key]}:</span>
+                        <span className="filter-pill-label">{filterLabelByKey[key] ?? key}:</span>
                         <span className="filter-pill-value">{value}</span>
                         <button
                             type="button"
                             className="filter-pill-x"
-                            aria-label={`Remove ${FILTER_LABELS[key]} filter ${value}`}
+                            aria-label={`Remove ${(filterLabelByKey[key] ?? key)} filter ${value}`}
                             onClick={() => removeFilterValue(key, value)}
                         >
                           x

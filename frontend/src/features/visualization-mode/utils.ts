@@ -2,12 +2,14 @@
 import type {
     GroupPayload,
     HelpRow,
+    LogTagSection,
     RequestRow,
     SeatRow,
     VisualizationScheduleRow,
     TeacherLog,
     StudentLog,
 } from "./types";
+import { getSectionFilterKey } from "./types";
 
 export const VISUALIZATION_ICON_BASE = "/visualization/icons";
 export const EASTERN_TIME_ZONE = "America/New_York";
@@ -63,18 +65,101 @@ function splitObservationStudentIds(rawValue: string): string[] {
     );
 }
 
+function normalizeColumnKey(value: string) {
+    return value
+        .replace(/\ufeff/g, "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+}
+
 function normCols(row: any) {
     const o: any = {};
     Object.keys(row).forEach((k) => {
-        const normalized = k
-            .replace(/\ufeff/g, "")
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "_")
-            .replace(/^_+|_+$/g, "");
+        const normalized = normalizeColumnKey(k);
         o[normalized] = row[k];
     });
     return o;
+}
+
+function splitNormalizedTags(raw: string): string[] {
+    return raw
+        .split(";")
+        .map((value) => value.trim())
+        .filter(Boolean);
+}
+
+function joinNormalizedTags(values: string[]): string {
+    return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).join("; ");
+}
+
+function getLegacyTagSectionLabel(normalizedKey: string, rawKey: string): string {
+    if (normalizedKey === "behavior_tags" || normalizedKey === "behavior") {
+        return "Behavior";
+    }
+
+    if (normalizedKey === "function_tags" || normalizedKey === "function") {
+        return "Function";
+    }
+
+    if (normalizedKey === "structure_tags" || normalizedKey === "structure") {
+        return "Structure";
+    }
+
+    if (normalizedKey === "custom_tags" || normalizedKey === "custom") {
+        return "Custom";
+    }
+
+    return cleanCsvText(rawKey);
+}
+
+function extractTagSectionsFromCsvRow(
+    rawRow: Record<string, string>,
+    excludedKeys: Set<string>,
+): { tagSections: LogTagSection[]; locations: string[] } {
+    const sectionBuckets = new Map<string, { label: string; tags: string[] }>();
+    const locations: string[] = [];
+
+    Object.entries(rawRow).forEach(([rawKey, rawValue]) => {
+        const normalizedKey = normalizeColumnKey(rawKey);
+        if (!normalizedKey || excludedKeys.has(normalizedKey)) {
+            return;
+        }
+
+        const { cleaned, location } = stripLocation(rawValue);
+        if (location) {
+            locations.push(location);
+        }
+
+        const normalizedTags = splitNormalizedTags(normalizeTags(cleaned));
+        if (normalizedTags.length === 0) {
+            return;
+        }
+
+        const label = getLegacyTagSectionLabel(normalizedKey, rawKey);
+        const key = getSectionFilterKey(label);
+        const existing = sectionBuckets.get(key);
+
+        if (existing) {
+            existing.tags.push(...normalizedTags);
+            return;
+        }
+
+        sectionBuckets.set(key, {
+            label,
+            tags: [...normalizedTags],
+        });
+    });
+
+    return {
+        tagSections: Array.from(sectionBuckets.entries()).map(([key, value]) => ({
+            key,
+            label: value.label,
+            tags: joinNormalizedTags(value.tags),
+        })),
+        locations,
+    };
 }
 
 function buildLocalDate(
@@ -555,7 +640,8 @@ export function parseSeating(rows: any[]): SeatRow[] {
 
 export function parseHelp(rows: any[]): HelpRow[] {
     const out: HelpRow[] = [];
-    for (const rr of rows.map(normCols)) {
+    for (const rawRow of rows as Array<Record<string, string>>) {
+        const rr = normCols(rawRow);
         const sid = intlikeStr(rr.student_id ?? rr.studentid);
 
         const rawStart = cleanCsvText(rr.start_time);
@@ -566,18 +652,20 @@ export function parseHelp(rows: any[]): HelpRow[] {
         if (!st || !et || et <= st) continue;
 
         const locParts: string[] = [];
-
-        const bh = stripLocation(rr.behavior_tags ?? rr.behaviortags);
-        if (bh.location) locParts.push(bh.location);
-
-        const fn = stripLocation(rr.function_tags ?? rr.functiontags);
-        if (fn.location) locParts.push(fn.location);
-
-        const stc = stripLocation(rr.structure_tags ?? rr.structuretags);
-        if (stc.location) locParts.push(stc.location);
-
-        const ct = stripLocation(rr.custom_tags ?? rr.customtags);
-        if (ct.location) locParts.push(ct.location);
+        const { tagSections, locations } = extractTagSectionsFromCsvRow(rawRow, new Set([
+            "session_id",
+            "observer_id",
+            "observer_name",
+            "student_id",
+            "studentid",
+            "teacher_position",
+            "start_time",
+            "end_time",
+            "note",
+            "notes",
+            "recording",
+        ]));
+        locParts.push(...locations);
 
         const teacherPosition = normalizeLocation(rr.teacher_position);
         if (teacherPosition) locParts.push(teacherPosition);
@@ -586,10 +674,7 @@ export function parseHelp(rows: any[]): HelpRow[] {
             student_id: sid,
             start_time: st,
             end_time: et,
-            behavior_tags: normalizeTags(bh.cleaned),
-            function_tags: normalizeTags(fn.cleaned),
-            structure_tags: normalizeTags(stc.cleaned),
-            custom_tags: normalizeTags(ct.cleaned),
+            tag_sections: tagSections,
             location: Array.from(new Set(locParts)).join("; "),
             note: cleanNote(rr.note ?? rr.notes),
             raw_start: rawStart,
@@ -601,7 +686,8 @@ export function parseHelp(rows: any[]): HelpRow[] {
 
 export function parseRequests(rows: any[]): RequestRow[] {
     const out: RequestRow[] = [];
-    for (const rr of rows.map(normCols)) {
+    for (const rawRow of rows as Array<Record<string, string>>) {
+        const rr = normCols(rawRow);
         const sid = intlikeStr(rr.student_id ?? rr.studentid);
 
         const rawStart = cleanCsvText(rr.start_time);
@@ -612,18 +698,30 @@ export function parseRequests(rows: any[]): RequestRow[] {
         if (!st || !et || et <= st) continue;
 
         const locParts: string[] = [];
-
-        const bh = stripLocation(rr.behavior_tags ?? rr.behaviortags);
-        if (bh.location) locParts.push(bh.location);
-
         const af = stripLocation(rr.affect ?? rr.affect_tags);
         if (af.location) locParts.push(af.location);
+        const { tagSections, locations } = extractTagSectionsFromCsvRow(rawRow, new Set([
+            "session_id",
+            "observer_id",
+            "observer_name",
+            "student_id",
+            "studentid",
+            "on_task",
+            "start_time",
+            "end_time",
+            "affect",
+            "affect_tags",
+            "note",
+            "notes",
+            "recording",
+        ]));
+        locParts.push(...locations);
 
         out.push({
             student_id: sid,
             start_time: st,
             end_time: et,
-            behavior_tags: normalizeTags(bh.cleaned),
+            tag_sections: tagSections,
             affect: normalizeTags(af.cleaned),
             on_task: rr.on_task,
             location: Array.from(new Set(locParts)).join("; "),
@@ -662,12 +760,12 @@ export function heatGreen(secs: number, maxSecs: number) {
     return `hsl(140 ${S}% ${L}%)`;
 }
 
-function isHelpRequestBehavior(behaviorTags: string | undefined | null): boolean {
-    if (!behaviorTags) return false;
+function isHelpRequestBehavior(tagSections: LogTagSection[] | undefined | null): boolean {
+    if (!tagSections || tagSections.length === 0) return false;
 
-    const parts = behaviorTags
-        .split(";")
-        .map((t) => t.trim().toLowerCase())
+    const parts = tagSections
+        .flatMap((section) => section.tags.split(";"))
+        .map((tag) => tag.trim().toLowerCase())
         .filter(Boolean);
 
     return parts.some((p) => p.includes("request") && p.includes("help"));
@@ -767,10 +865,7 @@ export function buildGroups(
                 student_id: h.student_id || "",
                 s2: h.start_time,
                 e2: h.end_time,
-                behavior_tags: h.behavior_tags || "",
-                function_tags: h.function_tags || "",
-                structure_tags: h.structure_tags || "",
-                custom_tags: h.custom_tags || "",
+                tag_sections: h.tag_sections || [],
                 location: h.location || "",
                 note: h.note || "",
                 raw_start: h.raw_start || "",
@@ -805,10 +900,7 @@ export function buildGroups(
                         student_id: rec.student_id,
                         start: sIso,
                         end: eIso,
-                        behavior_tags: rec.behavior_tags,
-                        function_tags: rec.function_tags,
-                        structure_tags: rec.structure_tags,
-                        custom_tags: rec.custom_tags,
+                        tag_sections: rec.tag_sections,
                         location: rec.location,
                         note: rec.note,
                         start_label: formatObservationTimeLabel(rec.raw_start, rec.s2) || undefined,
@@ -828,7 +920,7 @@ export function buildGroups(
                     student_id: h.student_id,
                     s2: h.start_time,
                     e2: h.end_time,
-                    behavior_tags: h.behavior_tags || "",
+                    tag_sections: h.tag_sections || [],
                     affect: h.affect || "",
                     on_task: h.on_task !== undefined ? String(h.on_task) : "",
                     location: h.location || "",
@@ -850,7 +942,7 @@ export function buildGroups(
                 const eIso = rec.e2.toISOString();
                 const studentIds = splitObservationStudentIds(rec.student_id);
 
-                if (isHelpRequestBehavior(rec.behavior_tags)) {
+                if (isHelpRequestBehavior(rec.tag_sections)) {
                     let matchedStudent = false;
                     for (const studentId of studentIds) {
                         if (!present.has(studentId)) continue;
@@ -869,7 +961,7 @@ export function buildGroups(
                     student_id: rec.student_id,
                     start: sIso,
                     end: eIso,
-                    behavior_tags: rec.behavior_tags,
+                    tag_sections: rec.tag_sections,
                     affect: rec.affect,
                     on_task: rec.on_task,
                     location: rec.location,

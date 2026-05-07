@@ -23,7 +23,7 @@ export const getObservationSessionSectionSubtitle = (
   const normalizedSectionName = normalizeSectionName(sectionName);
 
   if (segment === "Teacher") {
-    return TEACHER_SECTION_SUBTITLES[normalizedSectionName];
+    return TEACHER_SECTION_SUBTITLES[normalizedSectionName] ?? "Capture the teacher tags that match this category.";
   }
 
   if (
@@ -35,5 +35,5 @@ export const getObservationSessionSectionSubtitle = (
     return STUDENT_BEHAVIOR_SUBTITLE;
   }
 
-  return undefined;
+  return "Capture the student tags that match this category.";
 };

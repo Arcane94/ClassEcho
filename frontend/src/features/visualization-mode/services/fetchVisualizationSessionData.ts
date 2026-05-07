@@ -4,15 +4,15 @@ import type { TeacherObservationData } from "@/services/createTeacherObservation
 import { fetchSessionById, type SessionData } from "@/services/fetchSessionById";
 import { getAllStudentObservationsForSession } from "@/services/getAllStudentObservationsForSession";
 import { getAllTeacherObservationsForSession } from "@/services/getAllTeacherObservationsForSession";
+import { getSessionSectionInfo } from "@/services/getSessionSectionInfo";
+import {
+  getOrderedSectionNames,
+  getOrderedTagSections,
+  joinTags,
+} from "@/utils/observationTagExport";
 import { parseObservationTimestamp } from "../utils";
-import type { HelpRow, RequestRow } from "../types";
-
-type SelectedTagBuckets = {
-  behavior: string[];
-  function: string[];
-  structure: string[];
-  custom: string[];
-};
+import type { HelpRow, LogTagSection, RequestRow } from "../types";
+import { getSectionFilterKey } from "../types";
 
 export type VisualizationSessionData = {
   session: SessionData | null;
@@ -20,102 +20,16 @@ export type VisualizationSessionData = {
   studentRows: RequestRow[];
 };
 
-function normalizeTagList(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .filter((entry): entry is string => typeof entry === "string")
-        .map((entry) => entry.trim())
-        .filter(Boolean),
-    ),
-  );
-}
-
-function normalizeTagSections(value: unknown): Record<string, string[]> {
-  if (!value) {
-    return {};
-  }
-
-  if (typeof value === "string") {
-    try {
-      return normalizeTagSections(JSON.parse(value));
-    } catch {
-      return { Behavior: normalizeTagList([value]) };
-    }
-  }
-
-  if (Array.isArray(value)) {
-    return { Behavior: normalizeTagList(value) };
-  }
-
-  if (typeof value !== "object") {
-    return {};
-  }
-
-  return Object.entries(value as Record<string, unknown>).reduce<Record<string, string[]>>(
-    (accumulator, [key, tags]) => {
-      const normalizedTags = normalizeTagList(tags);
-      if (normalizedTags.length > 0) {
-        accumulator[key] = normalizedTags;
-      }
-      return accumulator;
-    },
-    {},
-  );
-}
-
-function normalizeSectionKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z]+/g, "");
-}
-
-function bucketSelectedTags(value: unknown): SelectedTagBuckets {
-  const sections = normalizeTagSections(value);
-
-  return Object.entries(sections).reduce<SelectedTagBuckets>(
-    (accumulator, [sectionName, tags]) => {
-      const normalizedKey = normalizeSectionKey(sectionName);
-
-      if (normalizedKey.includes("behavior")) {
-        accumulator.behavior.push(...tags);
-      } else if (normalizedKey.includes("function")) {
-        accumulator.function.push(...tags);
-      } else if (normalizedKey.includes("structure")) {
-        accumulator.structure.push(...tags);
-      } else {
-        accumulator.custom.push(...tags);
-      }
-
-      return accumulator;
-    },
-    { behavior: [], function: [], structure: [], custom: [] },
-  );
-}
-
-function dedupeTags(tags: string[]): string[] {
-  return Array.from(
-    new Set(
-      tags
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    ),
-  );
-}
-
-function joinTags(tags: string[]): string {
-  return dedupeTags(tags).join("; ");
-}
-
 function parseObservationDate(rawValue: unknown): Date | null {
   return parseObservationTimestamp(rawValue);
 }
 
 function parseAffect(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return normalizeTagList(value);
+    return value
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
   }
 
   if (typeof value === "string") {
@@ -164,7 +78,20 @@ function normalizeStudentIdValue(rawValue: unknown): string {
   return splitStudentIds(rawValue).join("; ");
 }
 
-function mapTeacherObservationToHelpRows(observation: TeacherObservationData): HelpRow[] {
+function toLogTagSections(selectedTags: unknown, orderedSectionNames: string[]): LogTagSection[] {
+  return getOrderedTagSections(selectedTags, orderedSectionNames)
+    .map((section) => ({
+      key: getSectionFilterKey(section.name),
+      label: section.name,
+      tags: joinTags(section.tags),
+    }))
+    .filter((section) => section.tags.trim() !== "");
+}
+
+function mapTeacherObservationToHelpRows(
+  observation: TeacherObservationData,
+  orderedSectionNames: string[],
+): HelpRow[] {
   const startTime = parseObservationDate(observation.start_time);
   const endTime = parseObservationDate(observation.end_time);
 
@@ -172,28 +99,24 @@ function mapTeacherObservationToHelpRows(observation: TeacherObservationData): H
     return [];
   }
 
-  const selectedTagBuckets = bucketSelectedTags(observation.selected_tags);
   const studentId = normalizeStudentIdValue(observation.student_id);
-  const baseRow = {
+
+  return [{
+    student_id: studentId,
     start_time: startTime,
     end_time: endTime,
-    behavior_tags: joinTags(selectedTagBuckets.behavior),
-    function_tags: joinTags(selectedTagBuckets.function),
-    structure_tags: joinTags(selectedTagBuckets.structure),
-    custom_tags: joinTags(selectedTagBuckets.custom),
+    tag_sections: toLogTagSections(observation.selected_tags, orderedSectionNames),
     note: String(observation.note ?? "").trim(),
     location: String(observation.teacher_position ?? "").trim(),
     raw_start: String(observation.start_time ?? ""),
     raw_end: String(observation.end_time ?? ""),
-  };
-
-  return [{
-    ...baseRow,
-    student_id: studentId,
   }];
 }
 
-function mapStudentObservationToRequestRows(observation: StudentObservationData): RequestRow[] {
+function mapStudentObservationToRequestRows(
+  observation: StudentObservationData,
+  orderedSectionNames: string[],
+): RequestRow[] {
   const startTime = parseObservationDate(observation.start_time);
   const endTime = parseObservationDate(observation.end_time);
 
@@ -201,31 +124,19 @@ function mapStudentObservationToRequestRows(observation: StudentObservationData)
     return [];
   }
 
-  const selectedTagBuckets = bucketSelectedTags(observation.selected_tags ?? observation.behavior_tags);
-  const allSelectedTags = [
-    ...selectedTagBuckets.behavior,
-    ...selectedTagBuckets.function,
-    ...selectedTagBuckets.structure,
-    ...selectedTagBuckets.custom,
-  ];
-  const behaviorTags =
-    selectedTagBuckets.behavior.length > 0 ? selectedTagBuckets.behavior : allSelectedTags;
   const studentId = normalizeStudentIdValue(observation.student_id);
-  const baseRow = {
+
+  return [{
+    student_id: studentId,
     start_time: startTime,
     end_time: endTime,
-    behavior_tags: joinTags(behaviorTags),
+    tag_sections: toLogTagSections(observation.selected_tags ?? observation.behavior_tags, orderedSectionNames),
     affect: joinTags(parseAffect(observation.affect)),
     on_task: normalizeOnTaskValue(observation.on_task),
     note: String(observation.note ?? "").trim(),
     location: "",
     raw_start: String(observation.start_time ?? ""),
     raw_end: String(observation.end_time ?? ""),
-  };
-
-  return [{
-    ...baseRow,
-    student_id: studentId,
   }];
 }
 
@@ -234,15 +145,33 @@ export async function fetchVisualizationSessionData(
   userId?: string | number | null,
 ): Promise<VisualizationSessionData> {
   const resolvedUserId = userId ?? localStorage.getItem("user_id");
-  const [session, teacherObservations, studentObservations] = await Promise.all([
+  const [session, teacherObservations, studentObservations, sessionSections] = await Promise.all([
     fetchSessionById(String(sessionId), resolvedUserId),
     getAllTeacherObservationsForSession(sessionId, resolvedUserId),
     getAllStudentObservationsForSession(sessionId, resolvedUserId),
+    getSessionSectionInfo(String(sessionId), resolvedUserId),
   ]);
+
+  const teacherSectionNames = getOrderedSectionNames(
+    (sessionSections ?? [])
+      .filter((section) => section.session_sector === "Teacher")
+      .map((section) => section.section_name),
+    teacherObservations.map((observation) => observation.selected_tags),
+  );
+  const studentSectionNames = getOrderedSectionNames(
+    (sessionSections ?? [])
+      .filter((section) => section.session_sector === "Student")
+      .map((section) => section.section_name),
+    studentObservations.map((observation) => observation.selected_tags ?? observation.behavior_tags),
+  );
 
   return {
     session,
-    teacherRows: teacherObservations.flatMap(mapTeacherObservationToHelpRows),
-    studentRows: studentObservations.flatMap(mapStudentObservationToRequestRows),
+    teacherRows: teacherObservations.flatMap((observation) =>
+      mapTeacherObservationToHelpRows(observation, teacherSectionNames),
+    ),
+    studentRows: studentObservations.flatMap((observation) =>
+      mapStudentObservationToRequestRows(observation, studentSectionNames),
+    ),
   };
 }

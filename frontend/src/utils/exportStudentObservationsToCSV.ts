@@ -1,8 +1,13 @@
 // Serializes student observations for one session into a downloadable CSV file.
 // Serializes student observations for one session into a downloadable CSV file.
+import { getSessionSectionInfo } from "../services/getSessionSectionInfo";
 import { getAllStudentObservationsForSession } from "../services/getAllStudentObservationsForSession";
 import type { StudentObservationData } from "../services/createStudentObservation";
-import { escapeCsvCell, getStudentTagCsvColumns } from "./observationTagExport";
+import {
+  escapeCsvCell,
+  getOrderedSectionNames,
+  getTagSectionCsvColumns,
+} from "./observationTagExport";
 
 //Exports student observations for a session to a CSV file
 export async function exportStudentObservationsToCSV(
@@ -21,6 +26,14 @@ export async function exportStudentObservationsToCSV(
       };
     }
 
+    const sessionSections = await getSessionSectionInfo(String(sessionId), userId);
+    const studentSectionNames = getOrderedSectionNames(
+      (sessionSections ?? [])
+        .filter((section) => section.session_sector === "Student")
+        .map((section) => section.section_name),
+      observations.map((observation) => observation.selected_tags ?? observation.behavior_tags),
+    );
+
     //Define CSV headers
     const headers = [
       "session_id",
@@ -30,9 +43,7 @@ export async function exportStudentObservationsToCSV(
       "on_task",
       "start_time",
       "end_time",
-      "behavior_tags",
-      "function_tags",
-      "structure_tags",
+      ...studentSectionNames,
       "affect",
       "note",
       "recording"
@@ -40,7 +51,10 @@ export async function exportStudentObservationsToCSV(
 
     //Convert observations to CSV rows
     const rows = observations.map((obs: StudentObservationData) => {
-      const tagColumns = getStudentTagCsvColumns(obs.selected_tags ?? obs.behavior_tags);
+      const tagColumns = getTagSectionCsvColumns(
+        obs.selected_tags ?? obs.behavior_tags,
+        studentSectionNames,
+      );
 
       return [
         obs.session_id,
@@ -50,9 +64,7 @@ export async function exportStudentObservationsToCSV(
         obs.on_task !== undefined ? obs.on_task : "",
         obs.start_time || "",
         obs.end_time || "",
-        tagColumns.behavior_tags,
-        tagColumns.function_tags,
-        tagColumns.structure_tags,
+        ...studentSectionNames.map((sectionName) => tagColumns[sectionName] || ""),
         Array.isArray(obs.affect) ? obs.affect.join(";") : "",
         obs.note || "",
         obs.recording !== undefined ? obs.recording : "",
@@ -61,7 +73,7 @@ export async function exportStudentObservationsToCSV(
 
     //Create CSV content
     const csvContent = [
-      headers.join(","),
+      headers.map((cell) => escapeCsvCell(cell)).join(","),
       ...rows.map(row => row.map((cell) => escapeCsvCell(cell)).join(","))
     ].join("\n");
 

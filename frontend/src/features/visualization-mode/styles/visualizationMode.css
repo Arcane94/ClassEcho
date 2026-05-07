@@ -1622,17 +1622,19 @@ body {
 .log-field {
   margin-top: 4px;
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   gap: 6px;
   font-size: 0.78rem;
 }
 
 .log-label {
+  flex: 0 0 108px;
   min-width: 70px;
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-dim);
+  line-height: 1.35;
 }
 
 .log-value {
@@ -1691,15 +1693,20 @@ body {
 /* Tag pills */
 .log-tags {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   flex-wrap: wrap;
   gap: 4px;
 }
 
 .log-tag {
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
   border: 1px solid var(--border);
   padding: 4px 9px;
   font-size: 0.75rem;
+  line-height: 1.1;
   background: rgba(247, 251, 255, 0.96);
 }
 
@@ -2446,19 +2453,16 @@ body {
 /* category pills row */
 .filter-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 6px;
   margin-bottom: 10px;
 }
 
-.filter-tabs-row {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-}
-
 .filter-tab {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.96);
   color: var(--ink);
@@ -2467,8 +2471,10 @@ body {
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
   transition: background 120ms ease, transform 80ms ease, border-color 120ms ease;
 }
 
@@ -2539,6 +2545,7 @@ body {
 .applied-filters {
   margin-top: 10px;
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
@@ -2548,6 +2555,9 @@ body {
 .filter-pill {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
   gap: 8px;
   padding: 7px 11px;
   border-radius: 999px;
@@ -2558,6 +2568,7 @@ body {
 }
 
 .filter-pill-label {
+  min-width: 0;
   color: var(--ink-dim);
   font-weight: 900;
   text-transform: uppercase;
@@ -2566,11 +2577,14 @@ body {
 }
 
 .filter-pill-value {
+  min-width: 0;
   font-weight: 800;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .filter-pill-x {
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
   border-radius: 999px;
@@ -2609,9 +2623,6 @@ body {
 }
 
 @media (max-width: 420px) {
-  .filter-tabs-row {
-    flex-wrap: wrap;
-  }
   .filter-input-row {
     flex-direction: column;
     align-items: stretch;
@@ -2620,14 +2631,6 @@ body {
     width: 100%;
   }
 }
-
-@media (min-width: 421px) and (max-width: 860px) {
-  .filter-tabs-row {
-    flex-wrap: wrap;
-  }
-}
-
-
 
 
 

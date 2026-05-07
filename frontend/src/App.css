@@ -1345,6 +1345,20 @@
   gap: 0.85rem;
 }
 
+.observation-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.observation-inline-button--toolbar {
+  min-height: 2.2rem;
+  padding: 0.48rem 0.82rem;
+  font-size: 0.82rem;
+  box-shadow: none;
+}
+
 .observation-option-list {
   display: flex;
   flex-direction: column;
@@ -1883,7 +1897,20 @@
 .observation-section-header {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 0.65rem;
+}
+
+.observation-editor-section-header-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.observation-editor-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
 }
 
 .observation-section-toggle {
@@ -1966,6 +1993,92 @@
   font-weight: 800;
 }
 
+.observation-editor-section-title--placeholder {
+  color: #64748b;
+}
+
+.observation-editor-section-title-input-shell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.observation-editor-section-title-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre;
+  padding: 0.18rem 0.46rem;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.observation-editor-section-title-input {
+  display: inline-block;
+  min-width: 0;
+  max-width: min(100%, 24rem);
+  padding: 0.18rem 0.46rem;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 0.38rem;
+  background: white;
+  color: #020617;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.3;
+  cursor: text;
+  appearance: none;
+  caret-color: #0ea5e9;
+  box-shadow: none;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.observation-editor-section-title-input::placeholder {
+  color: #94a3b8;
+}
+
+.observation-editor-section-title-input:hover {
+  border-color: rgba(15, 23, 42, 0.24);
+  background: white;
+}
+
+.observation-editor-section-title-input:focus {
+  outline: none;
+  border-color: var(--accent-color-deep);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(47, 170, 255, 0.18);
+}
+
+.observation-section-title-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border: 1px solid rgba(191, 219, 254, 0.92);
+  border-radius: 0.45rem;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.observation-section-title-edit-button:hover {
+  border-color: rgba(47, 170, 255, 0.42);
+  background: #f8fdff;
+  color: var(--accent-color-deep);
+}
+
+.observation-section-title-edit-button:focus-visible {
+  outline: none;
+  border-color: var(--accent-color-deep);
+  box-shadow: 0 0 0 3px rgba(47, 170, 255, 0.16);
+}
+
 .observation-section-copy {
   margin-top: 0.2rem;
   color: #64748b;
@@ -1978,6 +2091,15 @@
   color: #64748b;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.observation-inline-button--delete-corner {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.observation-inline-button-label {
+  display: inline;
 }
 
 .observation-chip-wrap {
@@ -3143,6 +3265,15 @@
     flex: 0 0 auto;
   }
 
+  .observation-inline-button-label--hide-mobile {
+    display: none;
+  }
+
+  .observation-inline-button--delete-corner {
+    min-width: 2.4rem;
+    padding-inline: 0.58rem;
+  }
+
   .observation-option-card {
     align-items: flex-start;
   }
@@ -3202,6 +3333,10 @@
 
   .observation-section-toggle-meta {
     justify-self: end;
+  }
+
+  .observation-editor-section-actions {
+    margin-top: 0.6rem;
   }
 
   .observation-chip-wrap {

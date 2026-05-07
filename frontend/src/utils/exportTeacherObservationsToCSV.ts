@@ -1,8 +1,13 @@
 // Serializes teacher observations for one session into a downloadable CSV file.
 // Serializes teacher observations for one session into a downloadable CSV file.
+import { getSessionSectionInfo } from "../services/getSessionSectionInfo";
 import { getAllTeacherObservationsForSession } from "../services/getAllTeacherObservationsForSession";
 import type { TeacherObservationData } from "../services/createTeacherObservation";
-import { escapeCsvCell, getTeacherTagCsvColumns } from "./observationTagExport";
+import {
+  escapeCsvCell,
+  getOrderedSectionNames,
+  getTagSectionCsvColumns,
+} from "./observationTagExport";
 
 //Exports teacher observations for a session to a CSV file
 export async function exportTeacherObservationsToCSV(
@@ -21,6 +26,14 @@ export async function exportTeacherObservationsToCSV(
       };
     }
 
+    const sessionSections = await getSessionSectionInfo(String(sessionId), userId);
+    const teacherSectionNames = getOrderedSectionNames(
+      (sessionSections ?? [])
+        .filter((section) => section.session_sector === "Teacher")
+        .map((section) => section.section_name),
+      observations.map((observation) => observation.selected_tags),
+    );
+
     //Define CSV headers
     const headers = [
       "session_id",
@@ -30,16 +43,14 @@ export async function exportTeacherObservationsToCSV(
       "teacher_position",
       "start_time",
       "end_time",
-      "behavior_tags",
-      "function_tags",
-      "structure_tags",
+      ...teacherSectionNames,
       "note",
       "recording"
     ];
 
     //Convert observations to CSV rows
     const rows = observations.map((obs: TeacherObservationData) => {
-      const tagColumns = getTeacherTagCsvColumns(obs.selected_tags);
+      const tagColumns = getTagSectionCsvColumns(obs.selected_tags, teacherSectionNames);
 
       return [
         obs.session_id,
@@ -49,9 +60,7 @@ export async function exportTeacherObservationsToCSV(
         obs.teacher_position || "",
         obs.start_time || "",
         obs.end_time || "",
-        tagColumns.behavior_tags,
-        tagColumns.function_tags,
-        tagColumns.structure_tags,
+        ...teacherSectionNames.map((sectionName) => tagColumns[sectionName] || ""),
         obs.note || "",
         obs.recording !== undefined ? obs.recording : "",
       ];
@@ -59,7 +68,7 @@ export async function exportTeacherObservationsToCSV(
 
     //Create CSV content
     const csvContent = [
-      headers.join(","),
+      headers.map((cell) => escapeCsvCell(cell)).join(","),
       ...rows.map(row => row.map((cell) => escapeCsvCell(cell)).join(","))
     ].join("\n");
 

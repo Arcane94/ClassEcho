@@ -6,7 +6,8 @@ import {
     useState,
     type PointerEvent as ReactPointerEvent,
 } from "react";
-import type { EmojiReactionInterval, GroupPayload, LogFilters } from "../types";
+import type { EmojiReactionInterval, GroupPayload, LogFilters, LogTagSection } from "../types";
+import { isSectionFilterKey } from "../types";
 import { clsx, fmtMS, VISUALIZATION_ICON_BASE } from "../utils";
 
 type LogsPanelProps = {
@@ -23,11 +24,7 @@ type CombinedLog = {
     start: string;
     end: string;
     student_id: string;
-
-    behavior_tags: string;
-    function_tags?: string;
-    structure_tags?: string;
-    custom_tags?: string;
+    tag_sections: LogTagSection[];
 
     affect?: string;
     on_task?: string;
@@ -77,6 +74,10 @@ function matchesTagList(tagsRaw: string | undefined, qRaw: string) {
         .map((t) => t.toLowerCase());
 
     return parts.some((p) => p === q || p.includes(q));
+}
+
+function findTagSectionByFilterKey(tagSections: LogTagSection[], filterKey: string) {
+    return tagSections.find((section) => section.key === filterKey);
 }
 
 function anyMatch(values: string[] | undefined, predicate: (v: string) => boolean) {
@@ -140,10 +141,7 @@ export function LogsPanel({
                 start: r.start,
                 end: r.end,
                 student_id: r.student_id,
-                behavior_tags: r.behavior_tags,
-                function_tags: r.function_tags,
-                structure_tags: r.structure_tags,
-                custom_tags: r.custom_tags,
+                tag_sections: r.tag_sections ?? [],
                 location: r.location,
                 note: r.note,
                 start_label: r.start_label,
@@ -157,7 +155,7 @@ export function LogsPanel({
                 start: r.start,
                 end: r.end,
                 student_id: r.student_id,
-                behavior_tags: r.behavior_tags,
+                tag_sections: r.tag_sections ?? [],
                 affect: r.affect,
                 on_task: r.on_task,
                 location: r.location,
@@ -174,7 +172,7 @@ export function LogsPanel({
                     start: interval.start,
                     end: interval.end,
                     student_id: studentId,
-                    behavior_tags: "",
+                    tag_sections: [],
                     start_label: formatEmojiTimeLabel(interval.start),
                     end_label: formatEmojiTimeLabel(interval.end),
                     emoji_key: interval.emoji_key,
@@ -183,13 +181,12 @@ export function LogsPanel({
         });
 
         const filtered = merged.filter((row) => {
-            const hasBehavior = row.behavior_tags && row.behavior_tags.trim() !== "";
+            const hasTagSections = row.tag_sections.some((section) => section.tags.trim() !== "");
             const hasAffect = row.affect && row.affect.trim() !== "";
-            const hasCustom = row.custom_tags && row.custom_tags.trim() !== "";
             const hasNote = row.note && row.note.trim() !== "";
             const hasLocation = row.location && row.location.trim() !== "";
             const hasEmoji = row.emoji_key && row.emoji_key.trim() !== "";
-            return hasBehavior || hasAffect || hasCustom || hasNote || hasLocation || hasEmoji;
+            return hasTagSections || hasAffect || hasNote || hasLocation || hasEmoji;
         });
 
         return filtered.sort(
@@ -206,13 +203,26 @@ export function LogsPanel({
                 const needle = v.trim();
                 return row.student_id === needle || rowStudentIds.includes(needle);
             })) return false;
-            if (!anyMatch(f.structure, (v) => matchesTagList(row.structure_tags, v))) return false;
-            if (!anyMatch(f.behavior, (v) => matchesTagList(row.behavior_tags, v))) return false;
-            if (!anyMatch(f.function, (v) => matchesTagList(row.function_tags, v))) return false;
-            if (!anyMatch(f.affect, (v) => matchesText(row.affect, v))) return false;
-            if (!anyMatch(f.emoji, (v) => matchesText(row.emoji_key, v))) return false;
-            if (!anyMatch(f.location, (v) => matchesText(row.location, v))) return false;
-            if (!anyMatch(f.note, (v) => matchesText(row.note, v))) return false;
+
+            for (const [filterKey, values] of Object.entries(f)) {
+                if (!values || values.length === 0 || filterKey === "student") {
+                    continue;
+                }
+
+                if (isSectionFilterKey(filterKey)) {
+                    const section = findTagSectionByFilterKey(row.tag_sections, filterKey);
+                    if (!anyMatch(values, (v) => matchesTagList(section?.tags, v))) {
+                        return false;
+                    }
+                    continue;
+                }
+
+                if (filterKey === "affect" && !anyMatch(values, (v) => matchesText(row.affect, v))) return false;
+                if (filterKey === "emoji" && !anyMatch(values, (v) => matchesText(row.emoji_key, v))) return false;
+                if (filterKey === "location" && !anyMatch(values, (v) => matchesText(row.location, v))) return false;
+                if (filterKey === "note" && !anyMatch(values, (v) => matchesText(row.note, v))) return false;
+            }
+
             return true;
         });
     }, [logsAll, filters]);
@@ -488,10 +498,11 @@ export function LogsPanel({
                             </div>
                         )}
 
-                        {renderTagRow("Behavior", row.behavior_tags)}
-                        {row.kind === "Teacher" && renderTagRow("Function", row.function_tags)}
-                        {row.kind === "Teacher" && renderTagRow("Structure", row.structure_tags)}
-                        {row.kind === "Teacher" && renderTagRow("Custom", row.custom_tags)}
+                        {row.tag_sections.map((section) => (
+                            <div key={section.key}>
+                                {renderTagRow(section.label, section.tags)}
+                            </div>
+                        ))}
 
                         {row.kind === "Emoji" && row.emoji_key && (
                             <div className="log-inline">

@@ -1,54 +1,86 @@
 // Session detail page used to edit one session's metadata, sections, and tags.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 import AddTagModal from "@/components/Modal/AddTagModal";
+import ConfirmationModal from "@/components/Modal/ConfirmationModal";
+import TextEntryModal from "@/components/Modal/TextEntryModal";
 import ObservationPanelLayout from "@/features/observation-mode/components/ObservationPanelLayout";
 import ObservationSegmentedTabs from "@/features/observation-mode/components/ObservationSegmentedTabs";
 import ObservationTagEditorSection from "@/features/observation-mode/components/ObservationTagEditorSection";
+import {
+  addSection,
+  addTagToSection,
+  clearSectionTags,
+  cloneEditableSessionSections,
+  createEditableSessionSection,
+  getSectionTone,
+  isDuplicateSectionName,
+  removeSection,
+  removeTagFromSection,
+  renameSection,
+  renameTagInSection,
+  serializeSessionSections,
+  type EditableSessionSection,
+  type SessionSector,
+} from "@/features/observation-mode/utils/sessionSections";
 import { getSessionSectionInfo } from "@/services/getSessionSectionInfo";
 import { updateSessionSections } from "@/services/updateSessionSections";
 
 type SessionEditorView = "teacher" | "student";
 type StatusTone = "error" | "success";
-type SavedSessionTags = {
-  behavior: string[];
-  function: string[];
-  structure: string[];
-  student: string[];
-};
+
+function getSectionInfoText(section: EditableSessionSection) {
+  return section.session_sector === "Teacher"
+    ? "Click a tag to rename it, use x to remove it, or rename the category itself."
+    : "Click a tag to rename it, use x to remove it, or rename the category itself.";
+}
 
 export default function ManageIndividualSessionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUserId = localStorage.getItem("user_id");
 
-  const [addTagModalString, setAddTagModalString] = useState("");
+  const [activeTagSectionId, setActiveTagSectionId] = useState<string | null>(null);
+  const [addCategorySector, setAddCategorySector] = useState<SessionSector | null>(null);
+  const [pendingDeleteSection, setPendingDeleteSection] = useState<EditableSessionSection | null>(null);
   const [viewing, setViewing] = useState<SessionEditorView>("teacher");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusTone, setStatusTone] = useState<StatusTone>("success");
-
-  const [teacherBehaviorTags, setTeacherBehaviorTags] = useState<string[]>([]);
-  const [functionTags, setFunctionTags] = useState<string[]>([]);
-  const [structureTags, setStructureTags] = useState<string[]>([]);
-  const [studentTags, setStudentTags] = useState<string[]>([]);
-  const [savedTags, setSavedTags] = useState<SavedSessionTags>({
-    behavior: [],
-    function: [],
-    structure: [],
-    student: [],
-  });
+  const [sessionSections, setSessionSections] = useState<EditableSessionSection[]>([]);
+  const [savedSections, setSavedSections] = useState<EditableSessionSection[]>([]);
 
   const sessionId = new URLSearchParams(location.search).get("sessionId") || "";
+  const currentSessionSector: SessionSector = viewing === "teacher" ? "Teacher" : "Student";
+  const visibleSections = useMemo(
+    () => sessionSections.filter((section) => section.session_sector === currentSessionSector),
+    [currentSessionSector, sessionSections],
+  );
+  const activeTagSection = activeTagSectionId
+    ? sessionSections.find((section) => section.id === activeTagSectionId) ?? null
+    : null;
 
-  const applyTagSnapshot = (snapshot: SavedSessionTags) => {
-    setTeacherBehaviorTags([...snapshot.behavior]);
-    setFunctionTags([...snapshot.function]);
-    setStructureTags([...snapshot.structure]);
-    setStudentTags([...snapshot.student]);
-  };
+  function validateCategoryName(sessionSector: SessionSector, value: string, sectionId?: string) {
+    if (isDuplicateSectionName(sessionSections, sessionSector, value, sectionId)) {
+      return `${sessionSector} category names must be unique.`;
+    }
+
+    return "";
+  }
+
+  function getSectionNameError(section: EditableSessionSection) {
+    const normalizedSectionName = section.section_name.trim();
+    if (!normalizedSectionName) {
+      return "Category name is required.";
+    }
+
+    return validateCategoryName(section.session_sector, normalizedSectionName, section.id);
+  }
+
+  const hasInvalidSectionNames = sessionSections.some((section) => Boolean(getSectionNameError(section)));
 
   useEffect(() => {
     const loadSessionSections = async () => {
@@ -68,109 +100,61 @@ export default function ManageIndividualSessionPage() {
         return;
       }
 
-      const teacherBehaviorSection = sections.find(
-        (section) => section.session_sector === "Teacher" && section.section_name.toLowerCase().includes("behavior"),
-      );
-      const functionSection = sections.find(
-        (section) => section.session_sector === "Teacher" && section.section_name.toLowerCase().includes("function"),
-      );
-      const structureSection = sections.find(
-        (section) => section.session_sector === "Teacher" && section.section_name.toLowerCase().includes("structure"),
-      );
-      const studentSection = sections.find((section) => section.session_sector === "Student");
+      const loadedSections = sections.map((section) => createEditableSessionSection({
+        id: String(section.section_id),
+        session_sector: section.session_sector === "Student" ? "Student" : "Teacher",
+        section_name: section.section_name,
+        tags: section.tags,
+      }));
 
-      const loadedTags = {
-        behavior: [...(teacherBehaviorSection?.tags || [])],
-        function: [...(functionSection?.tags || [])],
-        structure: [...(structureSection?.tags || [])],
-        student: [...(studentSection?.tags || [])],
-      };
-
-      setSavedTags(loadedTags);
-      applyTagSnapshot(loadedTags);
+      setSavedSections(cloneEditableSessionSections(loadedSections));
+      setSessionSections(cloneEditableSessionSections(loadedSections));
       setIsLoading(false);
     };
 
     loadSessionSections();
   }, [currentUserId, sessionId]);
 
-  const addTag = (category: string, value: string) => {
-    switch (category) {
-      case "behavior_tags":
-        setTeacherBehaviorTags((previous) => [...previous, value]);
-        break;
-      case "function_tags":
-        setFunctionTags((previous) => [...previous, value]);
-        break;
-      case "structure_tags":
-        setStructureTags((previous) => [...previous, value]);
-        break;
-      case "student_tags":
-        setStudentTags((previous) => [...previous, value]);
-        break;
-    }
-  };
-
-  const removeTag = (category: string, tagToRemove: string) => {
-    switch (category) {
-      case "teacher_behavior":
-        setTeacherBehaviorTags((previous) => previous.filter((tag) => tag !== tagToRemove));
-        break;
-      case "function":
-        setFunctionTags((previous) => previous.filter((tag) => tag !== tagToRemove));
-        break;
-      case "structure":
-        setStructureTags((previous) => previous.filter((tag) => tag !== tagToRemove));
-        break;
-      case "student":
-        setStudentTags((previous) => previous.filter((tag) => tag !== tagToRemove));
-        break;
-    }
-  };
-
-  const editTag = (category: string, currentTag: string) => {
-    const editedTag = window.prompt("Edit tag", currentTag);
-
-    if (!editedTag || !editedTag.trim() || editedTag === currentTag) {
+  const resetSectionToSaved = (sectionId: string) => {
+    const savedSection = savedSections.find((section) => section.id === sectionId);
+    if (!savedSection) {
       return;
     }
 
-    const nextTag = editedTag.trim();
+    setSessionSections((previous) => previous.map((section) => (
+      section.id === sectionId
+        ? {
+            ...section,
+            tags: [...savedSection.tags],
+          }
+        : section
+    )));
+  };
 
-    switch (category) {
-      case "teacher_behavior":
-        setTeacherBehaviorTags((previous) => previous.map((tag) => (tag === currentTag ? nextTag : tag)));
-        break;
-      case "function":
-        setFunctionTags((previous) => previous.map((tag) => (tag === currentTag ? nextTag : tag)));
-        break;
-      case "structure":
-        setStructureTags((previous) => previous.map((tag) => (tag === currentTag ? nextTag : tag)));
-        break;
-      case "student":
-        setStudentTags((previous) => previous.map((tag) => (tag === currentTag ? nextTag : tag)));
-        break;
+  const handleDeleteCategory = (section: EditableSessionSection) => {
+    setSessionSections((previous) => removeSection(previous, section.id));
+    if (activeTagSectionId === section.id) {
+      setActiveTagSectionId(null);
     }
   };
 
-  const resetSectionToSaved = (category: keyof SavedSessionTags) => {
-    switch (category) {
-      case "behavior":
-        setTeacherBehaviorTags([...savedTags.behavior]);
-        break;
-      case "function":
-        setFunctionTags([...savedTags.function]);
-        break;
-      case "structure":
-        setStructureTags([...savedTags.structure]);
-        break;
-      case "student":
-        setStudentTags([...savedTags.student]);
-        break;
+  const handleEditTag = (sectionId: string, currentTag: string) => {
+    const editedTag = window.prompt("Edit tag", currentTag);
+
+    if (!editedTag || !editedTag.trim() || editedTag.trim() === currentTag) {
+      return;
     }
+
+    setSessionSections((previous) => renameTagInSection(previous, sectionId, currentTag, editedTag));
   };
 
   const handleConfirmEdits = async () => {
+    if (hasInvalidSectionNames) {
+      setStatusTone("error");
+      setStatusMessage("Fix invalid category names before saving the session.");
+      return;
+    }
+
     if (!sessionId) {
       setStatusTone("error");
       setStatusMessage("Missing session id");
@@ -180,30 +164,7 @@ export default function ManageIndividualSessionPage() {
     setIsSaving(true);
     setStatusMessage("");
 
-    const sections = [
-      {
-        session_sector: "Teacher",
-        section_name: "Behavior",
-        tags: teacherBehaviorTags.map((tag_name) => ({ tag_name })),
-      },
-      {
-        session_sector: "Teacher",
-        section_name: "Function",
-        tags: functionTags.map((tag_name) => ({ tag_name })),
-      },
-      {
-        session_sector: "Teacher",
-        section_name: "Structure",
-        tags: structureTags.map((tag_name) => ({ tag_name })),
-      },
-      {
-        session_sector: "Student",
-        section_name: "Behaviors",
-        tags: studentTags.map((tag_name) => ({ tag_name })),
-      },
-    ];
-
-    const result = await updateSessionSections(sessionId, sections, currentUserId);
+    const result = await updateSessionSections(sessionId, serializeSessionSections(sessionSections), currentUserId);
 
     if (!result.success) {
       setStatusTone("error");
@@ -212,57 +173,17 @@ export default function ManageIndividualSessionPage() {
       return;
     }
 
-    setSavedTags({
-      behavior: [...teacherBehaviorTags],
-      function: [...functionTags],
-      structure: [...structureTags],
-      student: [...studentTags],
-    });
+    const nextSavedSections = cloneEditableSessionSections(sessionSections);
+    setSavedSections(nextSavedSections);
     setStatusTone("success");
     setStatusMessage("Session edits saved");
     setIsSaving(false);
   };
 
-  const teacherSections = [
-    {
-      key: "behavior",
-      title: "Behavior",
-      infoText: "What teacher moves should observers be able to log for this session? Click a tag to rename it or use x to remove it.",
-      tags: teacherBehaviorTags,
-      tone: "cyan" as const,
-      onAdd: () => setAddTagModalString("behavior"),
-      onResetToDefault: () => resetSectionToSaved("behavior"),
-      onRemove: (tag: string) => removeTag("teacher_behavior", tag),
-      onEdit: (tag: string) => editTag("teacher_behavior", tag),
-    },
-    {
-      key: "function",
-      title: "Function",
-      infoText: "What purposes should observers capture behind the teacher's moves in this session? Click a tag to rename it or use x to remove it.",
-      tags: functionTags,
-      tone: "blue" as const,
-      onAdd: () => setAddTagModalString("function"),
-      onResetToDefault: () => resetSectionToSaved("function"),
-      onRemove: (tag: string) => removeTag("function", tag),
-      onEdit: (tag: string) => editTag("function", tag),
-    },
-    {
-      key: "structure",
-      title: "Structure",
-      infoText: "What tools, routines, or classroom structures should observers be able to log for this session? Click a tag to rename it or use x to remove it.",
-      tags: structureTags,
-      tone: "rose" as const,
-      onAdd: () => setAddTagModalString("structure"),
-      onResetToDefault: () => resetSectionToSaved("structure"),
-      onRemove: (tag: string) => removeTag("structure", tag),
-      onEdit: (tag: string) => editTag("structure", tag),
-    },
-  ];
-
   return (
     <ObservationPanelLayout
       title="Manage Session Tags"
-      subtitle="Edit the saved tag sets for this session."
+      subtitle="Add, rename, and remove the saved categories for this session."
       onBack={() => navigate("/manage-sessions")}
       backPlacement="top-left"
       singleLineHeading
@@ -280,7 +201,7 @@ export default function ManageIndividualSessionPage() {
             type="button"
             className="observation-button observation-button--accent"
             onClick={handleConfirmEdits}
-            disabled={isSaving}
+            disabled={isSaving || hasInvalidSectionNames}
           >
             {isSaving ? "Saving..." : "Confirm Session Edits"}
           </button>
@@ -300,6 +221,18 @@ export default function ManageIndividualSessionPage() {
             onChange={setViewing}
           />
 
+          <div className="observation-editor-toolbar">
+            <button
+              type="button"
+              className="observation-inline-button observation-inline-button--add observation-inline-button--toolbar"
+              onClick={() => setAddCategorySector(currentSessionSector)}
+              aria-label={`Add ${viewing === "teacher" ? "teacher" : "student"} category`}
+            >
+              <Plus className="h-4 w-4" />
+              Add category
+            </button>
+          </div>
+
           {statusMessage && (
             <div
               className={`observation-status-banner ${
@@ -310,70 +243,75 @@ export default function ManageIndividualSessionPage() {
             </div>
           )}
 
-          {viewing === "teacher" ? (
-            <div className="observation-stack">
-              {teacherSections.map((section) => (
-                <ObservationTagEditorSection
-                  key={section.key}
-                  title={section.title}
-                  infoText={section.infoText}
-                  tags={section.tags}
-                  tone={section.tone}
-                  onAdd={section.onAdd}
-                  onResetToDefault={section.onResetToDefault}
-                  onRemove={section.onRemove}
-                  onEdit={section.onEdit}
-                />
-              ))}
-            </div>
+          {visibleSections.length === 0 ? (
+            <section className="observation-editor-section">
+              <p className="observation-empty-inline">
+                {`No ${viewing === "teacher" ? "teacher" : "student"} categories added yet.`}
+              </p>
+            </section>
           ) : (
-            <ObservationTagEditorSection
-              title="Student Behaviors"
-              infoText="What student actions should observers capture during this session? Click a tag to rename it or use x to remove it."
-              tags={studentTags}
-              tone="green"
-              onAdd={() => setAddTagModalString("student")}
-              onResetToDefault={() => resetSectionToSaved("student")}
-              onRemove={(tag) => removeTag("student", tag)}
-              onEdit={(tag) => editTag("student", tag)}
-            />
+            <div className="observation-stack">
+              {visibleSections.map((section, index) => {
+                const hasSavedVersion = savedSections.some((savedSection) => savedSection.id === section.id);
+
+                return (
+                  <ObservationTagEditorSection
+                    key={section.id}
+                    title={section.section_name}
+                    titleError={getSectionNameError(section)}
+                    onTitleChange={(value) => setSessionSections((previous) => renameSection(previous, section.id, value))}
+                    infoText={getSectionInfoText(section)}
+                    tags={section.tags}
+                    tone={getSectionTone(index, section.session_sector)}
+                    onAdd={() => setActiveTagSectionId(section.id)}
+                    onResetToDefault={hasSavedVersion ? () => resetSectionToSaved(section.id) : undefined}
+                    resetLabel="Revert"
+                    onClearTags={hasSavedVersion ? undefined : () => setSessionSections((previous) => clearSectionTags(previous, section.id))}
+                    onRemove={(tag) => setSessionSections((previous) => removeTagFromSection(previous, section.id, tag))}
+                    onEdit={(tag) => handleEditTag(section.id, tag)}
+                    onDeleteSection={() => setPendingDeleteSection(section)}
+                  />
+                );
+              })}
+            </div>
           )}
         </div>
       )}
 
-      {addTagModalString === "behavior" && (
+      {activeTagSection && (
         <AddTagModal
-          modalHeader="Add Tag"
-          tagSection="behavior_tags"
-          onAddTag={addTag}
-          onClose={() => setAddTagModalString("")}
+          modalHeader={`Add Tag to ${activeTagSection.section_name}`}
+          tagSection={activeTagSection.id}
+          onAddTag={(sectionId, value) => setSessionSections((previous) => addTagToSection(previous, sectionId, value))}
+          onClose={() => setActiveTagSectionId(null)}
         />
       )}
-      {addTagModalString === "function" && (
-        <AddTagModal
-          modalHeader="Add Tag"
-          tagSection="function_tags"
-          onAddTag={addTag}
-          onClose={() => setAddTagModalString("")}
+
+      {addCategorySector && (
+        <TextEntryModal
+          modalHeader="Add Category"
+          modalCopy="Create a new category for this side of the observation form."
+          fieldLabel="Category Name"
+          placeholder="Enter category name"
+          submitLabel="Add Category"
+          validate={(value) => validateCategoryName(addCategorySector, value)}
+          onSubmit={(value) => {
+            setSessionSections((previous) => addSection(previous, addCategorySector, value));
+          }}
+          onClose={() => setAddCategorySector(null)}
         />
       )}
-      {addTagModalString === "structure" && (
-        <AddTagModal
-          modalHeader="Add Tag"
-          tagSection="structure_tags"
-          onAddTag={addTag}
-          onClose={() => setAddTagModalString("")}
-        />
-      )}
-      {addTagModalString === "student" && (
-        <AddTagModal
-          modalHeader="Add Tag"
-          tagSection="student_tags"
-          onAddTag={addTag}
-          onClose={() => setAddTagModalString("")}
+
+      {pendingDeleteSection && (
+        <ConfirmationModal
+          title="Delete Category"
+          message={`Delete the ${pendingDeleteSection.section_name.trim() || "untitled"} category and all of its tags?`}
+          confirmLabel="Delete"
+          confirmTone="danger"
+          onConfirm={() => handleDeleteCategory(pendingDeleteSection)}
+          onClose={() => setPendingDeleteSection(null)}
         />
       )}
     </ObservationPanelLayout>
   );
 }
-

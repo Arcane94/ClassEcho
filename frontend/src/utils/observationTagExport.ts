@@ -1,7 +1,12 @@
-// Normalizes observation tag structures into CSV-ready columns.
-type TagSections = Record<string, string[]>;
+// Normalizes observation tag structures into session-category-aware CSV columns.
+export type TagSections = Record<string, string[]>;
 
-type ObservationTagCategory = "behavior_tags" | "function_tags" | "structure_tags";
+export interface OrderedTagSection {
+  name: string;
+  tags: string[];
+}
+
+const DEFAULT_LEGACY_SECTION_NAME = "Behavior";
 
 const normalizeTagList = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
@@ -18,21 +23,36 @@ const normalizeTagList = (value: unknown): string[] => {
   );
 };
 
-const normalizeTagSections = (value: unknown): TagSections => {
+export const normalizeSectionName = (value: string): string =>
+  value.trim().toLowerCase();
+
+export const joinTags = (tags: string[]): string =>
+  Array.from(
+    new Set(
+      tags
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  ).join("; ");
+
+export const normalizeTagSections = (
+  value: unknown,
+  legacySectionName = DEFAULT_LEGACY_SECTION_NAME,
+): TagSections => {
   if (!value) {
     return {};
   }
 
   if (typeof value === "string") {
     try {
-      return normalizeTagSections(JSON.parse(value));
+      return normalizeTagSections(JSON.parse(value), legacySectionName);
     } catch {
-      return { Behavior: normalizeTagList([value]) };
+      return { [legacySectionName]: normalizeTagList([value]) };
     }
   }
 
   if (Array.isArray(value)) {
-    return { Behavior: normalizeTagList(value) };
+    return { [legacySectionName]: normalizeTagList(value) };
   }
 
   if (typeof value !== "object") {
@@ -42,80 +62,107 @@ const normalizeTagSections = (value: unknown): TagSections => {
   const sections: TagSections = {};
 
   Object.entries(value as Record<string, unknown>).forEach(([key, tags]) => {
+    const normalizedKey = key.trim();
     const normalizedTags = normalizeTagList(tags);
-    if (normalizedTags.length > 0) {
-      sections[key] = normalizedTags;
+    if (normalizedKey && normalizedTags.length > 0) {
+      sections[normalizedKey] = normalizedTags;
     }
   });
 
   return sections;
 };
 
-const normalizeSectionKey = (value: string): string => value.toLowerCase().replace(/[^a-z]+/g, "");
+const createSectionOrderMap = (sectionNames: string[]) => {
+  const entries = new Map<string, string>();
 
-const resolveCategoryForSection = (sectionName: string): ObservationTagCategory | null => {
-  const normalizedKey = normalizeSectionKey(sectionName);
+  sectionNames.forEach((sectionName) => {
+    const trimmed = sectionName.trim();
+    if (!trimmed) {
+      return;
+    }
 
-  if (normalizedKey.includes("function")) {
-    return "function_tags";
-  }
+    const normalizedKey = normalizeSectionName(trimmed);
+    if (!entries.has(normalizedKey)) {
+      entries.set(normalizedKey, trimmed);
+    }
+  });
 
-  if (normalizedKey.includes("structure")) {
-    return "structure_tags";
-  }
-
-  if (normalizedKey.includes("behavior")) {
-    return "behavior_tags";
-  }
-
-  return null;
+  return entries;
 };
 
-const getSectionTags = (sections: TagSections, category: ObservationTagCategory): string[] => {
-  const matchedTags = Object.entries(sections)
-    .filter(([sectionName]) => resolveCategoryForSection(sectionName) === category)
-    .flatMap(([, tags]) => tags);
+export const getOrderedSectionNames = (
+  preferredSectionNames: string[],
+  selectedTagValues: unknown[],
+): string[] => {
+  const fallbackSectionName = preferredSectionNames.length === 1
+    ? preferredSectionNames[0]
+    : DEFAULT_LEGACY_SECTION_NAME;
+  const order = createSectionOrderMap(preferredSectionNames);
 
-  return Array.from(new Set(matchedTags));
+  selectedTagValues.forEach((selectedTags) => {
+    Object.keys(normalizeTagSections(selectedTags, fallbackSectionName)).forEach((sectionName) => {
+      const normalizedKey = normalizeSectionName(sectionName);
+      if (!order.has(normalizedKey)) {
+        order.set(normalizedKey, sectionName.trim());
+      }
+    });
+  });
+
+  return Array.from(order.values());
 };
 
-const joinTags = (tags: string[]): string => Array.from(new Set(tags)).join("; ");
+export const getOrderedTagSections = (
+  selectedTags: unknown,
+  orderedSectionNames: string[],
+): OrderedTagSection[] => {
+  const fallbackSectionName = orderedSectionNames.length === 1
+    ? orderedSectionNames[0]
+    : DEFAULT_LEGACY_SECTION_NAME;
+  const sections = normalizeTagSections(selectedTags, fallbackSectionName);
+  const orderedSections: OrderedTagSection[] = [];
+  const seen = new Set<string>();
+
+  orderedSectionNames.forEach((sectionName) => {
+    const normalizedKey = normalizeSectionName(sectionName);
+    const matchingTags = Object.entries(sections)
+      .filter(([name]) => normalizeSectionName(name) === normalizedKey)
+      .flatMap(([, tags]) => tags);
+
+    orderedSections.push({
+      name: sectionName,
+      tags: Array.from(new Set(matchingTags)),
+    });
+    seen.add(normalizedKey);
+  });
+
+  Object.entries(sections).forEach(([sectionName, tags]) => {
+    const normalizedKey = normalizeSectionName(sectionName);
+    if (seen.has(normalizedKey)) {
+      return;
+    }
+
+    orderedSections.push({
+      name: sectionName,
+      tags: Array.from(new Set(tags)),
+    });
+  });
+
+  return orderedSections;
+};
+
+export const getTagSectionCsvColumns = (
+  selectedTags: unknown,
+  orderedSectionNames: string[],
+): Record<string, string> =>
+  getOrderedTagSections(selectedTags, orderedSectionNames).reduce<Record<string, string>>(
+    (columns, section) => {
+      columns[section.name] = joinTags(section.tags);
+      return columns;
+    },
+    {},
+  );
 
 export const escapeCsvCell = (value: unknown): string => {
   const normalizedValue = value == null ? "" : String(value);
   return `"${normalizedValue.replace(/"/g, `""`)}"`;
-};
-
-export interface ObservationTagCsvColumns {
-  behavior_tags: string;
-  function_tags: string;
-  structure_tags: string;
-}
-
-export const getTeacherTagCsvColumns = (selectedTags: unknown): ObservationTagCsvColumns => {
-  const sections = normalizeTagSections(selectedTags);
-  const behaviorTags = getSectionTags(sections, "behavior_tags");
-  const functionTags = getSectionTags(sections, "function_tags");
-  const structureTags = getSectionTags(sections, "structure_tags");
-
-  return {
-    behavior_tags: joinTags(behaviorTags),
-    function_tags: joinTags(functionTags),
-    structure_tags: joinTags(structureTags),
-  };
-};
-
-export const getStudentTagCsvColumns = (selectedTags: unknown): ObservationTagCsvColumns => {
-  const sections = normalizeTagSections(selectedTags);
-  const behaviorTags = getSectionTags(sections, "behavior_tags");
-
-  const fallbackBehaviorTags = behaviorTags.length > 0
-    ? behaviorTags
-    : Array.from(new Set(Object.values(sections).flat()));
-
-  return {
-    behavior_tags: joinTags(fallbackBehaviorTags),
-    function_tags: "",
-    structure_tags: "",
-  };
 };

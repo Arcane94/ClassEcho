@@ -4,7 +4,7 @@ import { API_BASE_URL } from "../config";
 export interface UpdatedSessionSectionInput {
   session_sector: string;
   section_name: string;
-  tags: { tag_name: string }[];
+  tags?: { tag_name: string }[];
 }
 
 //Uses a given sessionId and updated sections to replace the section/tag structure in the database
