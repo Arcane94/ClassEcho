@@ -16,6 +16,7 @@ export interface LegacySessionTagDraft {
   functionTags?: string[];
   structureTags?: string[];
   studentTags?: string[];
+  studentAffectTags?: string[];
 }
 
 const DEFAULT_TEACHER_BEHAVIOR_TAGS = [
@@ -54,6 +55,31 @@ const DEFAULT_STUDENT_BEHAVIOR_TAGS = [
   "Running Code",
   "Talking w/ peer",
 ];
+const LEGACY_DEFAULT_STUDENT_AFFECT_TAGS = [
+  "Happy",
+  "Excited",
+  "Relaxed",
+  "Confused",
+  "Frustrated",
+  "Tired",
+  "Bored",
+  "Sad",
+  "Angry",
+];
+const DEFAULT_STUDENT_AFFECT_TAGS = [
+  "Excited",
+  "Suprised",
+  "Happy",
+  "Relaxed",
+  "Tired",
+  "Bored",
+  "Sad",
+  "Confused",
+  "Frustrated",
+  "Angry",
+  "Focused",
+  "Unfocused",
+];
 
 const TEACHER_SECTION_TONES: SessionSectionTone[] = ["cyan", "blue", "rose", "yellow"];
 const STUDENT_SECTION_TONES: SessionSectionTone[] = ["green", "cyan", "yellow", "blue", "rose"];
@@ -66,6 +92,52 @@ function normalizeTagList(tags: string[]): string[] {
         .filter(Boolean),
     ),
   );
+}
+
+function normalizeSectionName(sectionName: string): string {
+  return sectionName.trim().toLowerCase();
+}
+
+function areTagListsEqual(left: string[], right: string[]): boolean {
+  return left.length === right.length
+    && left.every((tag, index) => tag === right[index]);
+}
+
+function createDefaultStudentAffectSection() {
+  return createEditableSessionSection({
+    session_sector: "Student",
+    section_name: "Affect",
+    tags: DEFAULT_STUDENT_AFFECT_TAGS,
+    default_tags: DEFAULT_STUDENT_AFFECT_TAGS,
+  });
+}
+
+function upgradeAffectSectionDefaults(sections: EditableSessionSection[]): {
+  sections: EditableSessionSection[];
+  hasAffectSection: boolean;
+} {
+  let hasAffectSection = false;
+
+  return {
+    sections: sections.map((section) => {
+      if (
+        section.session_sector !== "Student"
+        || normalizeSectionName(section.section_name) !== "affect"
+      ) {
+        return section;
+      }
+
+      hasAffectSection = true;
+      const shouldUpgradeTags = areTagListsEqual(section.tags, LEGACY_DEFAULT_STUDENT_AFFECT_TAGS);
+
+      return {
+        ...section,
+        tags: shouldUpgradeTags ? [...DEFAULT_STUDENT_AFFECT_TAGS] : [...section.tags],
+        default_tags: [...DEFAULT_STUDENT_AFFECT_TAGS],
+      };
+    }),
+    hasAffectSection,
+  };
 }
 
 export function createLocalSectionId() {
@@ -106,7 +178,7 @@ export function createSessionSectionsFromLegacyTagDraft(
   draft: LegacySessionTagDraft,
   includeDefaultTagBackups = false,
 ): EditableSessionSection[] {
-  return [
+  const sections = [
     createEditableSessionSection({
       session_sector: "Teacher",
       section_name: "Behavior",
@@ -132,18 +204,32 @@ export function createSessionSectionsFromLegacyTagDraft(
       default_tags: includeDefaultTagBackups ? DEFAULT_STUDENT_BEHAVIOR_TAGS : undefined,
     }),
   ];
+
+  if ((draft.studentAffectTags?.length ?? 0) > 0) {
+    sections.push(createEditableSessionSection({
+      session_sector: "Student",
+      section_name: "Affect",
+      tags: draft.studentAffectTags ?? [],
+      default_tags: includeDefaultTagBackups ? DEFAULT_STUDENT_AFFECT_TAGS : undefined,
+    }));
+  }
+
+  return sections;
 }
 
 export function createDefaultSessionSections(): EditableSessionSection[] {
-  return createSessionSectionsFromLegacyTagDraft(
-    {
-      teacherBehaviorTags: DEFAULT_TEACHER_BEHAVIOR_TAGS,
-      functionTags: DEFAULT_FUNCTION_TAGS,
-      structureTags: DEFAULT_STRUCTURE_TAGS,
-      studentTags: DEFAULT_STUDENT_BEHAVIOR_TAGS,
-    },
-    true,
-  );
+  return [
+    ...createSessionSectionsFromLegacyTagDraft(
+      {
+        teacherBehaviorTags: DEFAULT_TEACHER_BEHAVIOR_TAGS,
+        functionTags: DEFAULT_FUNCTION_TAGS,
+        structureTags: DEFAULT_STRUCTURE_TAGS,
+        studentTags: DEFAULT_STUDENT_BEHAVIOR_TAGS,
+      },
+      true,
+    ),
+    createDefaultStudentAffectSection(),
+  ];
 }
 
 export function createBlankSessionSections(): EditableSessionSection[] {
@@ -152,6 +238,26 @@ export function createBlankSessionSections(): EditableSessionSection[] {
 
 export function getDefaultSessionSectionsForSector(sessionSector: SessionSector): EditableSessionSection[] {
   return createDefaultSessionSections().filter((section) => section.session_sector === sessionSector);
+}
+
+export function upgradeDefaultSessionDraftSections(sections: EditableSessionSection[]): EditableSessionSection[] {
+  const nextSections = cloneEditableSessionSections(sections);
+  const { sections: upgradedSections, hasAffectSection } = upgradeAffectSectionDefaults(nextSections);
+
+  if (hasAffectSection) {
+    return upgradedSections;
+  }
+
+  return [
+    ...upgradedSections,
+    createDefaultStudentAffectSection(),
+  ];
+}
+
+export function upgradeManageSessionSections(sections: EditableSessionSection[]): EditableSessionSection[] {
+  const nextSections = cloneEditableSessionSections(sections);
+  const { sections: upgradedSections } = upgradeAffectSectionDefaults(nextSections);
+  return upgradedSections;
 }
 
 export function serializeSessionSections(sections: EditableSessionSection[]): SessionSectionInput[] {
@@ -297,11 +403,22 @@ export function resetSectorToDefaultSections(
   sessionSector: SessionSector,
 ): EditableSessionSection[] {
   const defaultSections = getDefaultSessionSectionsForSector(sessionSector);
+  return replaceSectorSections(sections, sessionSector, defaultSections);
+}
+
+export function replaceSectorSections(
+  sections: EditableSessionSection[],
+  sessionSector: SessionSector,
+  replacementSections: EditableSessionSection[],
+): EditableSessionSection[] {
+  const nextSectorSections = cloneEditableSessionSections(
+    replacementSections.filter((section) => section.session_sector === sessionSector),
+  );
   const otherSections = sections.filter((section) => section.session_sector !== sessionSector);
 
   return sessionSector === "Teacher"
-    ? [...defaultSections, ...otherSections]
-    : [...otherSections, ...defaultSections];
+    ? [...nextSectorSections, ...otherSections]
+    : [...otherSections, ...nextSectorSections];
 }
 
 export function getSectionTone(sectionIndex: number, sessionSector: SessionSector): SessionSectionTone {
@@ -315,7 +432,7 @@ export function isDuplicateSectionName(
   sectionName: string,
   excludedSectionId?: string,
 ): boolean {
-  const normalizedSectionName = sectionName.trim().toLowerCase();
+  const normalizedSectionName = normalizeSectionName(sectionName);
   if (!normalizedSectionName) {
     return false;
   }
@@ -323,6 +440,6 @@ export function isDuplicateSectionName(
   return sections.some((section) => (
     section.session_sector === sessionSector
     && section.id !== excludedSectionId
-    && section.section_name.trim().toLowerCase() === normalizedSectionName
+    && normalizeSectionName(section.section_name) === normalizedSectionName
   ));
 }

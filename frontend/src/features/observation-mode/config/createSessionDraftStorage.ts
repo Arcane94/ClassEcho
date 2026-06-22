@@ -2,6 +2,7 @@
 import {
   cloneEditableSessionSections,
   createSessionSectionsFromLegacyTagDraft,
+  upgradeDefaultSessionDraftSections,
   type EditableSessionSection,
   type LegacySessionTagDraft,
 } from "@/features/observation-mode/utils/sessionSections";
@@ -16,11 +17,13 @@ export interface CreateSessionDraft {
   joinCodeMode: JoinCodeMode;
   isDefaultTags: boolean;
   studentIdNumericOnly: boolean;
+  defaultSectionDraftVersion?: number;
   defaultSectionDraft?: EditableSessionSection[];
   customSectionDraft?: EditableSessionSection[];
 }
 
 const CREATE_SESSION_DRAFT_STORAGE_KEY = "observation_create_session_draft";
+const CURRENT_DEFAULT_SECTION_DRAFT_VERSION = 3;
 
 export function getDefaultCreateSessionDraft(): CreateSessionDraft {
   return {
@@ -68,10 +71,23 @@ export function readCreateSessionDraft(): CreateSessionDraft {
       defaultTagDraft?: LegacySessionTagDraft;
       customTagDraft?: LegacySessionTagDraft;
     };
+    const parsedDefaultSectionDraft = readLegacySectionDraft(parsedDraft, "defaultSectionDraft", "defaultTagDraft");
+    const shouldUpgradeDefaultDraft = (
+      Boolean(parsedDefaultSectionDraft)
+      && (parsedDraft.defaultSectionDraftVersion ?? 0) < CURRENT_DEFAULT_SECTION_DRAFT_VERSION
+    );
+
     return {
       ...defaultDraft,
       ...parsedDraft,
-      defaultSectionDraft: readLegacySectionDraft(parsedDraft, "defaultSectionDraft", "defaultTagDraft"),
+      defaultSectionDraftVersion: parsedDefaultSectionDraft
+        ? CURRENT_DEFAULT_SECTION_DRAFT_VERSION
+        : parsedDraft.defaultSectionDraftVersion,
+      defaultSectionDraft: parsedDefaultSectionDraft
+        ? shouldUpgradeDefaultDraft
+          ? upgradeDefaultSessionDraftSections(parsedDefaultSectionDraft)
+          : parsedDefaultSectionDraft
+        : undefined,
       customSectionDraft: readLegacySectionDraft(parsedDraft, "customSectionDraft", "customTagDraft"),
     };
   } catch (error) {
@@ -82,19 +98,24 @@ export function readCreateSessionDraft(): CreateSessionDraft {
 
 export function saveCreateSessionDraft(draft: Partial<CreateSessionDraft>) {
   const currentDraft = readCreateSessionDraft();
+  const nextDefaultSectionDraft = draft.defaultSectionDraft
+    ? cloneEditableSessionSections(draft.defaultSectionDraft)
+    : currentDraft.defaultSectionDraft
+      ? cloneEditableSessionSections(currentDraft.defaultSectionDraft)
+      : undefined;
+  const nextCustomSectionDraft = draft.customSectionDraft
+    ? cloneEditableSessionSections(draft.customSectionDraft)
+    : currentDraft.customSectionDraft
+      ? cloneEditableSessionSections(currentDraft.customSectionDraft)
+      : undefined;
   const nextDraft = {
     ...currentDraft,
     ...draft,
-    defaultSectionDraft: draft.defaultSectionDraft
-      ? cloneEditableSessionSections(draft.defaultSectionDraft)
-      : currentDraft.defaultSectionDraft
-        ? cloneEditableSessionSections(currentDraft.defaultSectionDraft)
-        : undefined,
-    customSectionDraft: draft.customSectionDraft
-      ? cloneEditableSessionSections(draft.customSectionDraft)
-      : currentDraft.customSectionDraft
-        ? cloneEditableSessionSections(currentDraft.customSectionDraft)
-        : undefined,
+    defaultSectionDraftVersion: nextDefaultSectionDraft
+      ? CURRENT_DEFAULT_SECTION_DRAFT_VERSION
+      : undefined,
+    defaultSectionDraft: nextDefaultSectionDraft,
+    customSectionDraft: nextCustomSectionDraft,
   };
 
   sessionStorage.setItem(

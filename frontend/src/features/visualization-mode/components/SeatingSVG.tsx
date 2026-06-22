@@ -1,5 +1,13 @@
 // SVG renderer for the visualization seating chart and seated student overlays.
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type MouseEvent as ReactMouseEvent,
+    type ReactElement,
+    type WheelEvent as ReactWheelEvent,
+} from "react";
 import type { EmojiReactionInterval, GroupPayload } from "../types";
 import {
     clsx,
@@ -61,27 +69,31 @@ export function SeatingSVG({
                            }: SeatingSVGProps) {
     const layout = useMemo(() => {
         type Seat = GroupPayload["seats"][number];
-
-        type Pod = {
-            id: string;
-            seats: Seat[];
-            minX: number;
-            minY: number;
-            maxX: number;
-            maxY: number;
-            anchorX: number;
-            anchorY: number;
-            px: number;
-            py: number;
-            block: number;
-            isTeacher?: boolean;
+        type SeatCenter = { cx: number; cy: number; side: "left" | "right"; col: number };
+        type TeacherDeskRect = {
+            x: number;
+            y: number;
+            w: number;
+            h: number;
+            cx: number;
+            cy: number;
+            col: number;
+        };
+        type AxisLayout = {
+            coords: number[];
+            positions: Map<number, number>;
+            indexByCoord: Map<number, number>;
+            fallbackStart: number;
         };
 
-        const allSeats = group.seats;
+        const allSeats = group.seats.filter((seat) => Number.isFinite(seat.x) && Number.isFinite(seat.y));
         const pad = 24;
         const seatSize = 64;
         const seatGap = 10;
-        const podGap = 36;
+        const aisleGap = seatSize / 2;
+        const normalStep = seatSize + seatGap;
+        const compactAisleStep = (seatSize + aisleGap) / 2;
+        const teacherStudentGap = aisleGap;
 
         if (!allSeats.length) {
             return {
@@ -90,272 +102,233 @@ export function SeatingSVG({
                 height: 600,
                 seatSize,
                 seatGap,
-                podGap,
-                cellW: 200,
-                cellH: 200,
-                seatCentersByStudentId: {} as Record<
-                    string,
-                    { cx: number; cy: number; side: "left" | "right"; col: number }
-                >,
-                seatCentersByCoord: {} as Record<
-                    string,
-                    { cx: number; cy: number; side: "left" | "right"; col: number }
-                >,
-                teacherDeskRect: null as null | {
-                    x: number;
-                    y: number;
-                    w: number;
-                    h: number;
-                    cx: number;
-                    cy: number;
-                    col: number;
-                },
+                seatCentersByStudentId: {} as Record<string, SeatCenter>,
+                seatCentersByCoord: {} as Record<string, SeatCenter>,
+                teacherDeskRect: null as null | TeacherDeskRect,
                 gridLinesX: [] as number[],
                 gridLinesY: [] as number[],
-                widthInner: 600,
-                heightInner: 600,
-                toCX: (_x: number) => pad,
-                toCY: (_y: number) => pad,
+                toCX: (x: number) => {
+                    void x;
+                    return pad;
+                },
+                toCY: (y: number) => {
+                    void y;
+                    return pad;
+                },
             };
         }
 
         const teacherSeat = allSeats.find((s) => (s.seat_id || "").toLowerCase() === "teacher") || null;
         const studentSeats = allSeats.filter((s) => (s.seat_id || "").toLowerCase() !== "teacher");
 
-        // ---- 1) cluster student seats into pods (connected components) ----
-        const keyOf = (s: Seat) => `${s.x},${s.y}`;
-        const seatByKey = new Map<string, Seat>();
-        for (const s of studentSeats) seatByKey.set(keyOf(s), s);
+        const buildAxisLayout = (axis: "x" | "y"): AxisLayout => {
+            const perpendicularAxis = axis === "x" ? "y" : "x";
+            const occupiedCoords = Array.from(new Set(allSeats.map((seat) => seat[axis]))).sort((a, b) => a - b);
+            const allIntegerCoords = occupiedCoords.every((coord) => Number.isInteger(coord));
+            const minCoord = occupiedCoords[0] ?? 0;
+            const maxCoord = occupiedCoords[occupiedCoords.length - 1] ?? minCoord;
+            const coords =
+                allIntegerCoords && maxCoord - minCoord <= 100
+                    ? Array.from({ length: maxCoord - minCoord + 1 }, (_, index) => minCoord + index)
+                    : occupiedCoords;
+            const occupiedCoordSet = new Set(occupiedCoords);
+            const lineMap = new Map<number, Set<number>>();
 
-        const visited = new Set<string>();
-        const pods: Pod[] = [];
-
-        const neighborDeltas = [
-            [1, 0],
-            [-1, 0],
-            [0, 1],
-            [0, -1],
-            [1, 1],
-            [1, -1],
-            [-1, 1],
-            [-1, -1],
-        ] as const;
-
-        for (const s0 of studentSeats) {
-            const k0 = keyOf(s0);
-            if (visited.has(k0)) continue;
-            visited.add(k0);
-
-            const q: Seat[] = [s0];
-            const comp: Seat[] = [];
-
-            while (q.length) {
-                const cur = q.pop()!;
-                comp.push(cur);
-
-                for (const [dx, dy] of neighborDeltas) {
-                    const nk = `${cur.x + dx},${cur.y + dy}`;
-                    const ns = seatByKey.get(nk);
-                    if (!ns) continue;
-                    if (visited.has(nk)) continue;
-                    visited.add(nk);
-                    q.push(ns);
-                }
-            }
-
-            const xs = comp.map((s) => s.x);
-            const ys = comp.map((s) => s.y);
-            const minX = Math.min(...xs);
-            const maxX = Math.max(...xs);
-            const minY = Math.min(...ys);
-            const maxY = Math.max(...ys);
-
-            pods.push({
-                id: `pod-${pods.length}`,
-                seats: comp,
-                minX,
-                maxX,
-                minY,
-                maxY,
-                anchorX: minX,
-                anchorY: minY,
-                px: 0,
-                py: 0,
-                block: 0,
+            allSeats.forEach((seat) => {
+                const line = seat[perpendicularAxis];
+                const coord = seat[axis];
+                const lineCoords = lineMap.get(line) ?? new Set<number>();
+                lineCoords.add(coord);
+                lineMap.set(line, lineCoords);
             });
-        }
 
-        const teacherPod: Pod | null = teacherSeat
-            ? {
-                id: "teacher",
-                seats: [teacherSeat],
-                minX: teacherSeat.x,
-                maxX: teacherSeat.x,
-                minY: teacherSeat.y,
-                maxY: teacherSeat.y,
-                anchorX: teacherSeat.x,
-                anchorY: teacherSeat.y,
-                px: 0,
-                py: 0,
-                block: 0,
-                isTeacher: true,
-            }
-            : null;
+            const hasOccupiedBefore = (coord: number) => occupiedCoords.some((value) => value < coord);
+            const hasOccupiedAfter = (coord: number) => occupiedCoords.some((value) => value > coord);
+            const hasSameLineNeighbor = (coord: number) => {
+                for (const lineCoords of lineMap.values()) {
+                    if (!lineCoords.has(coord)) {
+                        continue;
+                    }
 
-        const podsAll = teacherPod ? [...pods, teacherPod] : pods;
-
-        // ---- 2) Build X-blocks (left/right blocks) from raw anchor gaps ----
-        const nearThreshold = 3;
-
-        const anchorXs = Array.from(new Set(podsAll.map((p) => p.anchorX))).sort((a, b) => a - b);
-        const anchorYs = Array.from(new Set(podsAll.map((p) => p.anchorY))).sort((a, b) => a - b);
-
-        const xBlock = new Map<number, number>();
-        {
-            let b = 0;
-            for (let i = 0; i < anchorXs.length; i++) {
-                if (i > 0) {
-                    const d = anchorXs[i] - anchorXs[i - 1];
-                    if (d > nearThreshold) b += 1;
+                    if (lineCoords.has(coord - 1) || lineCoords.has(coord + 1)) {
+                        return true;
+                    }
                 }
-                xBlock.set(anchorXs[i], b);
-            }
-        }
 
-        // ---- 3) Compress anchors to packed columns/rows ----
-        const compress = (vals: number[], axis: "x" | "y") => {
-            const m = new Map<number, number>();
-            let pos = 0;
-            for (let i = 0; i < vals.length; i++) {
-                const v = vals[i];
-                if (i === 0) {
-                    m.set(v, 0);
-                    continue;
+                return false;
+            };
+
+            const aisleCoords = new Set<number>();
+            coords.forEach((coord) => {
+                if (!hasOccupiedBefore(coord) || !hasOccupiedAfter(coord)) {
+                    return;
                 }
-                const prev = vals[i - 1];
-                const d = v - prev;
 
-                if (d <= nearThreshold) pos += 1;
-                else pos += axis === "x" ? 1 : 2;
+                if (!occupiedCoordSet.has(coord) || !hasSameLineNeighbor(coord)) {
+                    aisleCoords.add(coord);
+                }
+            });
 
-                m.set(v, pos);
-            }
-            return m;
-        };
+            const teacherCoord = teacherSeat?.[axis];
+            const studentCoords = new Set(studentSeats.map((seat) => seat[axis]));
+            const positions = new Map<number, number>();
+            let position = 0;
+            coords.forEach((coord, index) => {
+                if (index === 0) {
+                    positions.set(coord, position);
+                    return;
+                }
 
-        const xPacked = compress(anchorXs, "x");
-        const yPacked = compress(anchorYs, "y");
+                const previousCoord = coords[index - 1];
+                const rawDelta = coord - previousCoord;
+                const step =
+                    allIntegerCoords && rawDelta === 1
+                        ? aisleCoords.has(previousCoord) || aisleCoords.has(coord)
+                            ? compactAisleStep
+                            : normalStep
+                        : Math.max(1, rawDelta) * normalStep;
+                const extraGap =
+                    axis === "y" &&
+                    teacherCoord !== undefined &&
+                    previousCoord === teacherCoord &&
+                    studentCoords.has(coord)
+                        ? teacherStudentGap
+                        : 0;
 
-        for (const p of podsAll) {
-            p.px = xPacked.get(p.anchorX) ?? 0;
-            p.py = yPacked.get(p.anchorY) ?? 0;
-            p.block = xBlock.get(p.anchorX) ?? 0;
-        }
+                position += step + extraGap;
+                positions.set(coord, position);
+            });
 
-        // ---- 4) Determine cell size ----
-        const podPixelSize = (p: Pod) => {
-            if (p.isTeacher) {
-                return { w: seatSize * 2 + seatGap, h: seatSize };
-            }
-            const spanX = Math.max(1, p.maxX - p.minX + 1);
-            const spanY = Math.max(1, p.maxY - p.minY + 1);
             return {
-                w: spanX * seatSize + (spanX - 1) * seatGap,
-                h: spanY * seatSize + (spanY - 1) * seatGap,
+                coords,
+                positions,
+                indexByCoord: new Map(coords.map((coord, index) => [coord, index])),
+                fallbackStart: minCoord,
             };
         };
 
-        const maxPodW = Math.max(...podsAll.map((p) => podPixelSize(p).w));
-        const maxPodH = Math.max(...podsAll.map((p) => podPixelSize(p).h));
+        const xAxis = buildAxisLayout("x");
+        const yAxis = buildAxisLayout("y");
 
-        const cellW = maxPodW + podGap;
-        const cellH = maxPodH + podGap;
+        const resolveAxisCenter = (axisLayout: AxisLayout, shift: number, value: number) => {
+            const direct = axisLayout.positions.get(value);
+            if (direct !== undefined) {
+                return shift + direct;
+            }
 
-        const maxPX = Math.max(0, ...podsAll.map((p) => p.px));
-        const maxPY = Math.max(0, ...podsAll.map((p) => p.py));
+            const coords = axisLayout.coords;
+            if (coords.length === 0) {
+                return shift;
+            }
 
-        const widthInner = (maxPX + 1) * cellW - podGap;
-        const heightInner = (maxPY + 1) * cellH - podGap;
+            const before = [...coords].reverse().find((coord) => coord < value);
+            const after = coords.find((coord) => coord > value);
+            if (before !== undefined && after !== undefined) {
+                const beforePos = axisLayout.positions.get(before) ?? 0;
+                const afterPos = axisLayout.positions.get(after) ?? beforePos;
+                const ratio = (value - before) / (after - before);
+                return shift + beforePos + (afterPos - beforePos) * ratio;
+            }
 
-        const width = pad * 2 + widthInner;
-        const height = pad * 2 + heightInner;
+            return shift + (value - axisLayout.fallbackStart) * normalStep;
+        };
 
-        // ---- 5) Compute seat centers (pods horizontally centered in each cell) ----
-        const seatCentersByStudentId: Record<
-            string,
-            { cx: number; cy: number; side: "left" | "right"; col: number }
-        > = {};
-        const seatCentersByCoord: Record<
-            string,
-            { cx: number; cy: number; side: "left" | "right"; col: number }
-        > = {};
+        const rawCenterX = (seat: Seat) => xAxis.positions.get(seat.x) ?? 0;
+        const rawCenterY = (seat: Seat) => yAxis.positions.get(seat.y) ?? 0;
+        const deskW = seatSize * 2 + seatGap;
+        const deskH = seatSize;
+        const getRawBounds = (seat: Seat) => {
+            const cx = rawCenterX(seat);
+            const cy = rawCenterY(seat);
+            const isTeacher = (seat.seat_id || "").toLowerCase() === "teacher";
 
-        let teacherDeskRect: null | {
-            x: number;
-            y: number;
-            w: number;
-            h: number;
-            cx: number;
-            cy: number;
-            col: number;
-        } = null;
+            if (isTeacher) {
+                const left = cx - seatSize / 2;
+                const top = cy - deskH / 2;
 
-        for (const p of podsAll) {
-            const cellStartX = pad + p.px * cellW;
-            const cellStartY = pad + p.py * cellH;
-
-            const { w: podWpx } = podPixelSize(p);
-
-            // Center within full cell
-            const alignDx = Math.max(0, (cellW - podWpx) / 2);
-
-            const baseX = cellStartX + alignDx;
-            const baseY = cellStartY;
-
-            if (p.isTeacher) {
-                const deskW = seatSize * 2 + seatGap;
-                const deskH = seatSize;
-
-                const deskX = cellStartX + Math.max(0, (cellW - deskW) / 2);
-                const deskY = cellStartY + Math.max(0, (cellH - deskH) / 2);
-
-                teacherDeskRect = {
-                    x: deskX,
-                    y: deskY,
-                    w: deskW,
-                    h: deskH,
-                    cx: deskX + deskW / 2,
-                    cy: deskY + deskH / 2,
-                    col: p.px,
+                return {
+                    minX: left,
+                    maxX: left + deskW,
+                    minY: top,
+                    maxY: top + deskH,
                 };
-                continue;
             }
 
-            const midX = pad + widthInner / 2;
+            return {
+                minX: cx - seatSize / 2,
+                maxX: cx + seatSize / 2,
+                minY: cy - seatSize / 2,
+                maxY: cy + seatSize / 2,
+            };
+        };
 
-            for (const s of p.seats) {
-                const lx = s.x - p.minX;
-                const ly = s.y - p.minY;
+        let minX = Number.POSITIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
 
-                const cx = baseX + lx * (seatSize + seatGap) + seatSize / 2;
-                const cy = baseY + ly * (seatSize + seatGap) + seatSize / 2;
+        allSeats.forEach((seat) => {
+            const bounds = getRawBounds(seat);
 
-                const side: "left" | "right" = cx < midX ? "left" : "right";
+            minX = Math.min(minX, bounds.minX);
+            maxX = Math.max(maxX, bounds.maxX);
+            minY = Math.min(minY, bounds.minY);
+            maxY = Math.max(maxY, bounds.maxY);
+        });
 
-                seatCentersByCoord[`${s.x},${s.y}`] = { cx, cy, side, col: p.px };
-                if (s.studentid) seatCentersByStudentId[s.studentid] = { cx, cy, side, col: p.px };
-            }
+        const contentW = Math.max(1, maxX - minX);
+        const contentH = Math.max(1, maxY - minY);
+        const width = Math.max(600, pad * 2 + contentW);
+        const height = Math.max(600, pad * 2 + contentH);
+        const extraX = Math.max(0, (width - (pad * 2 + contentW)) / 2);
+        const extraY = Math.max(0, (height - (pad * 2 + contentH)) / 2);
+        const shiftX = pad + extraX - minX;
+        const shiftY = pad + extraY - minY;
+
+        const seatCentersByStudentId: Record<string, SeatCenter> = {};
+        const seatCentersByCoord: Record<string, SeatCenter> = {};
+        let teacherDeskRect: null | TeacherDeskRect = null;
+
+        for (const s of studentSeats) {
+            const cx = shiftX + rawCenterX(s);
+            const cy = shiftY + rawCenterY(s);
+            const side: "left" | "right" = cx < width / 2 ? "left" : "right";
+            const col = xAxis.indexByCoord.get(s.x) ?? 0;
+
+            seatCentersByCoord[`${s.x},${s.y}`] = { cx, cy, side, col };
+            if (s.studentid) seatCentersByStudentId[s.studentid] = { cx, cy, side, col };
         }
 
-        const gridLinesX: number[] = [];
-        const gridLinesY: number[] = [];
-        for (let i = 0; i <= maxPX + 1; i++) gridLinesX.push(pad + i * cellW);
-        for (let i = 0; i <= maxPY + 1; i++) gridLinesY.push(pad + i * cellH);
+        if (teacherSeat) {
+            const deskX = shiftX + rawCenterX(teacherSeat) - seatSize / 2;
+            const cy = shiftY + rawCenterY(teacherSeat);
 
-        const xsRaw = allSeats.map((s) => s.x);
-        const ysRaw = allSeats.map((s) => s.y);
-        const minX = Math.min(...xsRaw);
-        const minY = Math.min(...ysRaw);
+            teacherDeskRect = {
+                x: deskX,
+                y: cy - deskH / 2,
+                w: deskW,
+                h: deskH,
+                cx: deskX + deskW / 2,
+                cy,
+                col: xAxis.indexByCoord.get(teacherSeat.x) ?? 0,
+            };
+        }
+
+        const buildGridLines = (axisLayout: AxisLayout, shift: number, minEdge: number, maxEdge: number) => {
+            const lines = [shift + minEdge];
+
+            for (let index = 1; index < axisLayout.coords.length; index += 1) {
+                const previousCoord = axisLayout.coords[index - 1];
+                const coord = axisLayout.coords[index];
+                const previousPosition = axisLayout.positions.get(previousCoord) ?? 0;
+                const position = axisLayout.positions.get(coord) ?? previousPosition;
+                lines.push(shift + (previousPosition + position) / 2);
+            }
+
+            lines.push(shift + maxEdge);
+
+            return Array.from(new Set(lines.map((line) => Math.round(line * 1000) / 1000))).sort((a, b) => a - b);
+        };
 
         return {
             pad,
@@ -363,18 +336,13 @@ export function SeatingSVG({
             height,
             seatSize,
             seatGap,
-            podGap,
-            cellW,
-            cellH,
-            widthInner,
-            heightInner,
             seatCentersByStudentId,
             seatCentersByCoord,
             teacherDeskRect,
-            gridLinesX,
-            gridLinesY,
-            toCX: (x: number) => pad + (x - minX + 1) * (seatSize + seatGap),
-            toCY: (y: number) => pad + (y - minY + 1) * (seatSize + seatGap),
+            gridLinesX: buildGridLines(xAxis, shiftX, minX, maxX),
+            gridLinesY: buildGridLines(yAxis, shiftY, minY, maxY),
+            toCX: (x: number) => resolveAxisCenter(xAxis, shiftX, x),
+            toCY: (y: number) => resolveAxisCenter(yAxis, shiftY, y),
         };
     }, [group.seats]);
 
@@ -561,21 +529,21 @@ export function SeatingSVG({
         setOffset(newOffset);
     };
 
-    const handleWheel = (e: any) => {
+    const handleWheel = (e: ReactWheelEvent<SVGSVGElement>) => {
         if (!svgRef.current) return;
         e.preventDefault();
         const factor = e.deltaY > 0 ? 0.9 : 1.1;
         applyZoomAtPoint(factor, clientToSvgPoint(e.clientX, e.clientY));
     };
 
-    const handleMouseDown = (e: any) => {
+    const handleMouseDown = (e: ReactMouseEvent<SVGSVGElement>) => {
         if (!svgRef.current) return;
         e.preventDefault();
         setIsPanning(true);
         lastPosRef.current = { x: e.clientX, y: e.clientY };
     };
 
-    const handleMouseMove = (e: any) => {
+    const handleMouseMove = (e: ReactMouseEvent<SVGSVGElement>) => {
         if (!isPanning) return;
 
         const svgEl = svgRef.current;
@@ -614,6 +582,26 @@ export function SeatingSVG({
     const zoomIn = () => applyZoomAtPoint(1.2, { x: layout.width / 2, y: layout.height / 2 });
     const zoomOut = () => applyZoomAtPoint(1 / 1.2, { x: layout.width / 2, y: layout.height / 2 });
 
+    const getTeacherDeskIconRect = () => {
+        if (!layout.teacherDeskRect) return null;
+
+        const size = Math.max(22, layout.seatSize * 0.55);
+        const gap = Math.max(8, layout.seatGap * 1.2);
+        const desk = layout.teacherDeskRect;
+        const rightX = desk.x + desk.w + gap;
+        const leftX = desk.x - gap - size;
+        const x =
+            rightX + size <= layout.width - layout.pad / 2
+                ? rightX
+                : Math.max(layout.pad / 2, leftX);
+
+        return {
+            x,
+            y: desk.y + (desk.h - size) / 2,
+            size,
+        };
+    };
+
     // ---------- NEW: default "fit to content" so it starts zoomed-in ----------
     const computeFitTransform = () => {
         // Bounds based on actual seat rectangles + teacher desk (not the grid cells)
@@ -641,6 +629,16 @@ export function SeatingSVG({
             maxX = Math.max(maxX, r.x + r.w);
             minY = Math.min(minY, r.y);
             maxY = Math.max(maxY, r.y + r.h);
+        }
+
+        if (teacherAtFront) {
+            const teacherIconRect = getTeacherDeskIconRect();
+            if (teacherIconRect) {
+                minX = Math.min(minX, teacherIconRect.x);
+                maxX = Math.max(maxX, teacherIconRect.x + teacherIconRect.size);
+                minY = Math.min(minY, teacherIconRect.y);
+                maxY = Math.max(maxY, teacherIconRect.y + teacherIconRect.size);
+            }
         }
 
         if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
@@ -874,18 +872,16 @@ export function SeatingSVG({
     // Teacher icon: at desk if teacherAtFront, else next to active student
     const teacher = (() => {
         if (teacherAtFront && layout.teacherDeskRect) {
-            const { cx, cy } = layout.teacherDeskRect;
-            const size = Math.max(22, layout.seatSize * 0.55);
-            const tx = cx;
-            const ty = cy - layout.seatSize * 0.9;
+            const teacherIconRect = getTeacherDeskIconRect();
+            if (!teacherIconRect) return null;
 
             return (
                 <image
                     href={TEACHER_SRC}
-                    x={tx - size / 2}
-                    y={ty - size / 2}
-                    width={size}
-                    height={size}
+                    x={teacherIconRect.x}
+                    y={teacherIconRect.y}
+                    width={teacherIconRect.size}
+                    height={teacherIconRect.size}
                     preserveAspectRatio="xMidYMid meet"
                     style={{ pointerEvents: "none" }}
                 />

@@ -1,7 +1,7 @@
 // Session detail page used to edit one session's metadata, sections, and tags.
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 
 import AddTagModal from "@/components/Modal/AddTagModal";
 import ConfirmationModal from "@/components/Modal/ConfirmationModal";
@@ -21,7 +21,9 @@ import {
   removeTagFromSection,
   renameSection,
   renameTagInSection,
+  replaceSectorSections,
   serializeSessionSections,
+  upgradeManageSessionSections,
   type EditableSessionSection,
   type SessionSector,
 } from "@/features/observation-mode/utils/sessionSections";
@@ -32,9 +34,13 @@ type SessionEditorView = "teacher" | "student";
 type StatusTone = "error" | "success";
 
 function getSectionInfoText(section: EditableSessionSection) {
-  return section.session_sector === "Teacher"
-    ? "Click a tag to rename it, use x to remove it, or rename the category itself."
-    : "Click a tag to rename it, use x to remove it, or rename the category itself.";
+  const normalizedSectionName = section.section_name.trim().toLowerCase();
+
+  if (section.session_sector === "Student" && normalizedSectionName === "affect") {
+    return "Click a tag to rename it, use x to remove it, or rename the affect category itself.";
+  }
+
+  return "Click a tag to rename it, use x to remove it, or rename the category itself.";
 }
 
 export default function ManageIndividualSessionPage() {
@@ -45,6 +51,7 @@ export default function ManageIndividualSessionPage() {
   const [activeTagSectionId, setActiveTagSectionId] = useState<string | null>(null);
   const [addCategorySector, setAddCategorySector] = useState<SessionSector | null>(null);
   const [pendingDeleteSection, setPendingDeleteSection] = useState<EditableSessionSection | null>(null);
+  const [pendingResetSector, setPendingResetSector] = useState<SessionSector | null>(null);
   const [viewing, setViewing] = useState<SessionEditorView>("teacher");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,12 +107,14 @@ export default function ManageIndividualSessionPage() {
         return;
       }
 
-      const loadedSections = sections.map((section) => createEditableSessionSection({
-        id: String(section.section_id),
-        session_sector: section.session_sector === "Student" ? "Student" : "Teacher",
-        section_name: section.section_name,
-        tags: section.tags,
-      }));
+      const loadedSections = upgradeManageSessionSections(
+        sections.map((section) => createEditableSessionSection({
+          id: String(section.section_id),
+          session_sector: section.session_sector === "Student" ? "Student" : "Teacher",
+          section_name: section.section_name,
+          tags: section.tags,
+        })),
+      );
 
       setSavedSections(cloneEditableSessionSections(loadedSections));
       setSessionSections(cloneEditableSessionSections(loadedSections));
@@ -136,6 +145,12 @@ export default function ManageIndividualSessionPage() {
     if (activeTagSectionId === section.id) {
       setActiveTagSectionId(null);
     }
+  };
+
+  const handleResetSector = (sessionSector: SessionSector) => {
+    setSessionSections((previous) => replaceSectorSections(previous, sessionSector, savedSections));
+    setActiveTagSectionId(null);
+    setPendingResetSector(null);
   };
 
   const handleEditTag = (sectionId: string, currentTag: string) => {
@@ -231,6 +246,14 @@ export default function ManageIndividualSessionPage() {
               <Plus className="h-4 w-4" />
               Add category
             </button>
+            <button
+              type="button"
+              className="observation-inline-button observation-inline-button--reset-inline observation-inline-button--toolbar"
+              onClick={() => setPendingResetSector(currentSessionSector)}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </button>
           </div>
 
           {statusMessage && (
@@ -310,6 +333,17 @@ export default function ManageIndividualSessionPage() {
           confirmTone="danger"
           onConfirm={() => handleDeleteCategory(pendingDeleteSection)}
           onClose={() => setPendingDeleteSection(null)}
+        />
+      )}
+
+      {pendingResetSector && (
+        <ConfirmationModal
+          title="Reset Categories"
+          message={`Restore the last saved ${pendingResetSector.toLowerCase()} categories and tags for this session?`}
+          confirmLabel="Reset"
+          confirmTone="danger"
+          onConfirm={() => handleResetSector(pendingResetSector)}
+          onClose={() => setPendingResetSector(null)}
         />
       )}
     </ObservationPanelLayout>

@@ -78,6 +78,10 @@ function getSectionInfoText(section: EditableSessionSection) {
     return "What student actions do you want observers to capture during the session?";
   }
 
+  if (normalizedSectionName === "affect") {
+    return "What student affect states do you want observers to capture during the session?";
+  }
+
   return section.session_sector === "Teacher"
     ? "What tags should observers be able to use in this teacher category?"
     : "What tags should observers be able to use in this student category?";

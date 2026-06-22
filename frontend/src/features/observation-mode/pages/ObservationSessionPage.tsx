@@ -26,18 +26,6 @@ import OfflineIndicator from "@/components/Status/OfflineIndicator";
 import { getSessionSectionInfo } from "@/services/getSessionSectionInfo";
 import { normalizeStudentIdForSubmission, sanitizeStudentIdInput } from "@/utils/studentIdFormatting";
 
-
-//Affect Icon Svg Imports 
-import angryAffectIcon from "@/assets/images/angry_affect.svg";
-import boredAffectIcon from "@/assets/images/bored_affect.svg";
-import confusedAffectIcon from "@/assets/images/confused_affect.svg";
-import excitedAffectIcon from "@/assets/images/excited_affect.svg";
-import frustratedAffectIcon from "@/assets/images/frustrated_affect.svg";
-import happyAffectIcon from "@/assets/images/happy_affect.svg";
-import relaxedAffectIcon from "@/assets/images/relaxed_affect.svg";
-import tiredAffectIcon from "@/assets/images/tired_affect.svg";
-import sadAffectIcon from "@/assets/images/sad_affect.svg";
-
 import { registerOfflineQueueSync, storeObservationLocally } from "@/services/offlineQueue";
 import { updateSessionObservers } from "@/services/updateSessionObservers";
 import { updateUserSessions } from "@/services/updateUserSessions";
@@ -112,11 +100,8 @@ export default function ObservationSessionPage() {
     //State to store the selected tags for teacher observation
     const [selectedTeacherTags, setSelectedTeacherTags] = useState<Record<string, string[]>>({});
 
-    //State to store the selected behavior tags for student observation
+    //State to store the selected tags for student observation
     const [selectedStudentTags, setSelectedStudentTags] = useState<Record<string, string[]>>({});
-
-    //State to store selected student affect tags
-    const [selectedAffectTags, setSelectedAffectTags] = useState<string[]>([]);
 
     //State to store student ID(s) from teacher side
     const [teacherObsStudentId, setTeacherObsStudentId] = useState('');
@@ -126,12 +111,6 @@ export default function ObservationSessionPage() {
 
     //Constant List of Teacher Position Tags
     const teacherPositionTags = ["By Student", "At Front", "On LMS", "Walking"];
-
-    //Constant List of Student Emotion Affects
-    const studentAffects = ["Excited", "Suprised", "Happy", "Relaxed", "Tired", "Bored", "Sad", "Confused", "Frustrated", "Angry", "Focused", "Unfocused"];
-
-    //Constant List of Student Emotion Affect Icons
-    const studentAffectIcons = [excitedAffectIcon, excitedAffectIcon, happyAffectIcon, relaxedAffectIcon, tiredAffectIcon, boredAffectIcon, sadAffectIcon, confusedAffectIcon, frustratedAffectIcon, angryAffectIcon, happyAffectIcon, boredAffectIcon];
 
     //Session id pulled from url (used for server call)
     const [sessionId, setSessionId] = useState(0);
@@ -272,15 +251,6 @@ export default function ObservationSessionPage() {
         setStudentSections(studentSections);
     };
     
-    //Helper function that toggles a string in a useState array for selecting tags
-    const toggleStringInArray = (array: string[], item: string): string[] => {
-        if (array.includes(item)) {
-          return array.filter(i => i !== item);
-        } else {
-          return [...array, item];
-        }
-      };
-
     //Builds the key used to store custom tags for teacher/student section pairs
     const buildCustomTagKey = (isTeacherSection: boolean, sectionName: string): string => {
         return `${isTeacherSection ? 'teacher' : 'student'}:${sectionName}`;
@@ -338,7 +308,6 @@ export default function ObservationSessionPage() {
 
     const hasStudentObservationContent = (): boolean => {
         return Object.keys(compactSelectedSectionTags(selectedStudentTags)).length > 0
-            || selectedAffectTags.length > 0
             || extraStudentNote.trim().length > 0;
     };
 
@@ -352,7 +321,6 @@ export default function ObservationSessionPage() {
         } else {
             setExtraStudentNote('');
             setSelectedStudentTags({});
-            setSelectedAffectTags([]);
             setIsStudentOnTask(true);
             setStudentObsStudentId('');
         }
@@ -444,7 +412,6 @@ export default function ObservationSessionPage() {
             end_time: observationWindow.end_time,
             student_id: normalizedStudentStudentId,
             selected_tags: compactSelectedSectionTags(selectedStudentTags),
-            affect: selectedAffectTags,
             note: extraStudentNote.trim(),
             single_click: false,
             recording: observationWindow.recording,
@@ -716,25 +683,6 @@ export default function ObservationSessionPage() {
                     );
                 })}
 
-                <ObservationSelectableTagSection
-                    title="Affect"
-                    subtitle="Capture the student affect visible in the moment."
-                    tags={studentAffects}
-                    activeTone="student"
-                    isActive={(tag) => selectedAffectTags.includes(tag)}
-                    onToggle={(tag) => {
-                        setSelectedAffectTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
-                    }}
-                    renderTagContent={(tag, index) => (
-                        <>
-                            <img src={studentAffectIcons[index]} alt="" className="h-5 w-5" />
-                            <span>{tag}</span>
-                        </>
-                    )}
-                    collapsible
-                    defaultOpen
-                />
-
                 <div className="observation-surface-card observation-notes">
                     <ObservationTextField
                         label="Extra Notes"
@@ -890,4 +838,3 @@ export default function ObservationSessionPage() {
         </>
     )
 }
-
