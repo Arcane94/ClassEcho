@@ -8,6 +8,7 @@ type FetchVisualizationCodeUrlsParams = {
   prefix: string;
   start: string;
   end: string;
+  timeZone?: string | null;
 };
 
 export async function fetchVisualizationCodeUrls({
@@ -17,6 +18,7 @@ export async function fetchVisualizationCodeUrls({
   prefix,
   start,
   end,
+  timeZone,
 }: FetchVisualizationCodeUrlsParams) {
   const resolvedUserId = userId ?? localStorage.getItem("user_id");
   const queryString = new URLSearchParams({
@@ -26,6 +28,7 @@ export async function fetchVisualizationCodeUrls({
     prefix,
     start,
     end,
+    time_zone: String(timeZone ?? ""),
     onlySnapshots: "1",
   });
 

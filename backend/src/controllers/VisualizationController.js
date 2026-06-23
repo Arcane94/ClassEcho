@@ -2,7 +2,12 @@
 const Visualization = require('../models/VisualizationModel');
 const VisualizationSetup = require('../models/VisualizationSetupModel');
 const Session = require('../models/SessionModel');
-const { EASTERN_TIME_ZONE, toEasternMySQLDateTime } = require('../utils/ToSQLDateTime');
+const {
+  EASTERN_TIME_ZONE,
+  parseMySQLDateTimeInTimeZone,
+  toEasternMySQLDateTime,
+  toTimeZoneMySQLDateTime,
+} = require('../utils/ToSQLDateTime');
 const { describeSessionAccess, normalizeUserId } = require('../utils/sessionAccess');
 
 function parseStudents(raw) {
@@ -54,6 +59,32 @@ function formatDbDateTime(value) {
   }
 
   return String(value);
+}
+
+function parseDatabaseDateTime(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    return parseMySQLDateTimeInTimeZone(value, EASTERN_TIME_ZONE);
+  }
+
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function formatDbDateTimeForTimeZone(value, timeZone) {
+  const parsedDate = parseDatabaseDateTime(value);
+  if (!parsedDate) {
+    return formatDbDateTime(value);
+  }
+
+  return toTimeZoneMySQLDateTime(parsedDate, timeZone) ?? formatDbDateTime(value);
 }
 
 function formatEmojiRow(row, beforeWindow) {
@@ -375,6 +406,7 @@ exports.getCodeUrls = async (req, res) => {
 
     const students = parseStudents(req.query.students);
     const prefix = parsePrefix(req.query.prefix);
+    const replayTimeZone = normalizeTimeZone(req.query.time_zone ?? req.query.timezone) || EASTERN_TIME_ZONE;
     const start = toMysqlDatetime(req.query.start);
     const end = toMysqlDatetime(req.query.end);
 
@@ -408,7 +440,7 @@ exports.getCodeUrls = async (req, res) => {
           ...student,
           entries: rows.map((row) => ({
             rowId: row.id,
-            serverTime: formatDbDateTime(row.serverTime),
+            serverTime: formatDbDateTimeForTimeZone(row.serverTime, replayTimeZone),
             projectID: String(row.projectID),
             assignmentID: String(row.assignmentID),
             userID: String(row.userID),
@@ -419,7 +451,7 @@ exports.getCodeUrls = async (req, res) => {
 
     return res.json({
       ok: true,
-      window: { start, end },
+      window: { start, end, timeZone: replayTimeZone },
       prefix,
       students: studentPayload,
     });

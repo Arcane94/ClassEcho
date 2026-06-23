@@ -7,6 +7,7 @@ import {
   fetchVisualizationCodeSnapshot,
   type VisualizationCodeSnapshot,
 } from "../services/fetchVisualizationCodeSnapshot";
+import { EASTERN_TIME_ZONE, parseMysqlDateTimeInTimeZone } from "../utils";
 
 type Entry = {
   rowId: number;
@@ -22,6 +23,7 @@ type Props = {
   sessionId: string | number;
   userId?: string | number | null;
   studentNumber: string;
+  timeZone?: string | null;
   tNow: Date;
   entries: Entry[];
   loadingEntries?: boolean;
@@ -35,18 +37,17 @@ function getOriginForUrl(url: string) {
   return new URL(url, window.location.href).origin;
 }
 
-function parseMysqlDatetimeLocal(value: string): number | null {
-  if (!value) return null;
-  const isoLike = value.includes("T") ? value : value.replace(" ", "T");
-  const date = new Date(isoLike);
+function parseEntryServerTime(value: string, timeZone: string): number | null {
+  const date = parseMysqlDateTimeInTimeZone(value, timeZone);
+  if (!date) return null;
   const time = date.getTime();
   return Number.isFinite(time) ? time : null;
 }
 
-function pickBestEntry(entries: Entry[], t: Date): Entry | null {
+function pickBestEntry(entries: Entry[], t: Date, timeZone: string): Entry | null {
   if (!entries || entries.length === 0) return null;
 
-  const times = entries.map((entry) => parseMysqlDatetimeLocal(entry.serverTime));
+  const times = entries.map((entry) => parseEntryServerTime(entry.serverTime, timeZone));
   if (times.every((time) => time == null)) return entries[entries.length - 1];
 
   const target = t.getTime();
@@ -109,6 +110,7 @@ export function StudentCodeView({
   sessionId,
   userId,
   studentNumber,
+  timeZone = EASTERN_TIME_ZONE,
   tNow,
   entries,
   loadingEntries,
@@ -122,7 +124,10 @@ export function StudentCodeView({
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
 
   const safeEntries = useMemo(() => (Array.isArray(entries) ? entries : []), [entries]);
-  const chosen = useMemo(() => pickBestEntry(safeEntries, tNow), [safeEntries, tNow]);
+  const chosen = useMemo(
+    () => pickBestEntry(safeEntries, tNow, timeZone || EASTERN_TIME_ZONE),
+    [safeEntries, tNow, timeZone],
+  );
   const viewerSrc = useMemo(
     () => `${SNAP_RUNTIME_VIEWER_URL}?reload=${reloadToken}`,
     [reloadToken],

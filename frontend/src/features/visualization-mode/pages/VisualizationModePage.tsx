@@ -627,6 +627,7 @@ export default function VisualizationModePage() {
         prefix: isnapPrefix.trim(),
         start,
         end,
+        timeZone: current.timezone,
       });
 
       const next: Record<string, any[]> = {};
@@ -640,7 +641,7 @@ export default function VisualizationModePage() {
     } finally {
       setCodeUrlsLoading(false);
     }
-  }, [current?.t0, current?.t1, current?.seats, currentUserId, isnapPrefix, selectedSessionId]);
+  }, [current, currentUserId, isnapPrefix, selectedSessionId]);
 
   useEffect(() => {
     refreshCodeUrls();
@@ -1213,6 +1214,7 @@ export default function VisualizationModePage() {
                                 sessionId={selectedSessionId}
                                 userId={currentUserId}
                                 studentNumber={studentViewId}
+                                timeZone={current.timezone}
                                 tNow={tNow}
                                 entries={codeUrlCache[studentViewId] ?? []}
                                 loadingEntries={codeUrlsLoading}

@@ -345,6 +345,43 @@ function buildDateInTimeZone(
     return Number.isNaN(result.getTime()) ? null : result;
 }
 
+export function parseMysqlDateTimeInTimeZone(
+    raw: unknown,
+    timeZoneRaw: unknown = EASTERN_TIME_ZONE
+): Date | null {
+    const s = cleanCsvText(raw);
+    if (isNullishCsvValue(s)) return null;
+
+    const zoned = s.match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?([zZ]|[+-]\d{2}:\d{2})$/
+    );
+    if (zoned) {
+        const iso =
+            `${zoned[1]}-${zoned[2]}-${zoned[3]}T${zoned[4]}:${zoned[5]}:${zoned[6] ?? "00"}` +
+            `${zoned[7] ? `.${zoned[7].padEnd(3, "0")}` : ""}${zoned[8]}`;
+        const dt = new Date(iso);
+        return Number.isNaN(dt.getTime()) ? null : dt;
+    }
+
+    const local = s.match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/
+    );
+    if (local) {
+        return buildDateInTimeZone(
+            Number(local[1]),
+            Number(local[2]),
+            Number(local[3]),
+            Number(local[4]),
+            Number(local[5]),
+            Number(local[6] ?? "0"),
+            normalizeVisualizationTimeZone(timeZoneRaw, EASTERN_TIME_ZONE)
+        );
+    }
+
+    const dt = new Date(s);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
 export function formatClockLabel(d: Date, twelveHour: boolean): string {
     if (twelveHour) {
         const ampm = d.getHours() >= 12 ? "PM" : "AM";
