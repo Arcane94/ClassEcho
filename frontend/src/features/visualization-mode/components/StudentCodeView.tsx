@@ -31,6 +31,10 @@ type Props = {
 const VIEWER_MESSAGE_SOURCE = "snapclass-code-viewer";
 const SNAP_RUNTIME_VIEWER_URL = `${API_BASE_URL}/isnap-runtime/snapclass-viewer.html`;
 
+function getOriginForUrl(url: string) {
+  return new URL(url, window.location.href).origin;
+}
+
 function parseMysqlDatetimeLocal(value: string): number | null {
   if (!value) return null;
   const isoLike = value.includes("T") ? value : value.replace(" ", "T");
@@ -131,7 +135,7 @@ export function StudentCodeView({
         type: "load-snapshot",
         payload: snapshot,
       },
-      API_BASE_URL,
+      getOriginForUrl(SNAP_RUNTIME_VIEWER_URL),
     );
   }, []);
 

@@ -51,6 +51,32 @@
       let ide = null;
       let pendingPayload = null;
       let lastFrameTime = 0;
+      const viewerConfig = {
+        noCloud: true,
+        noExitWarning: true,
+      };
+
+      function disableCloudForViewer() {
+        if (typeof Cloud === "undefined" || !Cloud.prototype) {
+          return;
+        }
+
+        const finishWithoutCloud = function (onSuccess) {
+          if (typeof this.disable === "function") {
+            this.disable();
+          } else {
+            this.disabled = true;
+            this.username = null;
+          }
+
+          if (typeof onSuccess === "function") {
+            onSuccess(null);
+          }
+        };
+
+        Cloud.prototype.initSession = finishWithoutCloud;
+        Cloud.prototype.checkCredentials = finishWithoutCloud;
+      }
 
       function selectSprite(spriteName) {
         try {
@@ -115,8 +141,10 @@
       });
 
       window.addEventListener("load", () => {
+        disableCloudForViewer();
+
         world = new WorldMorph(document.getElementById("world"));
-        new IDE_Morph().openIn(world);
+        new IDE_Morph(viewerConfig).openIn(world);
         ide = world.children[0];
 
         try {
