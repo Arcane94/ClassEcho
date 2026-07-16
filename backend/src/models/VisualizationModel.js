@@ -5,6 +5,7 @@ const config = require('../config/appConfig');
 const userTable = config.visualizationDatabase.userTable;
 const traceTable = config.visualizationDatabase.traceTable;
 const emojiTable = config.visualizationDatabase.emojiTable;
+const mediaTable = config.visualizationDatabase.mediaTable || 'project_media';
 
 exports.getUsersByUsernames = async function (usernames) {
   if (!Array.isArray(usernames) || usernames.length === 0) {
@@ -71,6 +72,16 @@ exports.getLatestSelectedSpriteForTarget = async function (projectId, serverTime
     .orderBy('serverTime', 'desc')
     .orderBy('id', 'desc')
     .first();
+};
+
+exports.getProjectMediaByHashes = async function (hashes) {
+  if (!Array.isArray(hashes) || hashes.length === 0) {
+    return [];
+  }
+
+  return db(mediaTable)
+    .select('hash', 'mime_type', 'data')
+    .whereIn('hash', hashes);
 };
 
 exports.getLatestEmojiReactionBeforeStart = async function (userId, start) {

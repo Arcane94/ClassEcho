@@ -9,6 +9,10 @@ const {
   toTimeZoneMySQLDateTime,
 } = require('../utils/ToSQLDateTime');
 const { describeSessionAccess, normalizeUserId } = require('../utils/sessionAccess');
+const {
+  findProjectMediaHashes,
+  rehydrateProjectMedia,
+} = require('../utils/projectMediaRehydration');
 
 function parseStudents(raw) {
   return String(raw ?? '')
@@ -496,6 +500,11 @@ exports.getCodeSnapshot = async (req, res) => {
       });
     }
 
+    const code = String(snapshotRow.code);
+    const mediaHashes = findProjectMediaHashes(code);
+    const mediaRows = await Visualization.getProjectMediaByHashes(mediaHashes);
+    const rehydratedCode = rehydrateProjectMedia(code, mediaRows);
+
     return res.json({
       ok: true,
       rowId,
@@ -505,7 +514,7 @@ exports.getCodeSnapshot = async (req, res) => {
         projectID: String(snapshotRow.projectID),
         assignmentID: String(snapshotRow.assignmentID),
         userID: String(snapshotRow.userID),
-        code: String(snapshotRow.code),
+        code: rehydratedCode,
         spriteName: parseSpriteName(spriteRow?.data),
       },
     });

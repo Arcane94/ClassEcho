@@ -26,10 +26,11 @@ const config = {
   },
   visualizationDatabase: {
     ...sharedDatabase,
-    db: process.env.VISUALIZATION_DB_NAME || "snapclass",
+    db: process.env.VISUALIZATION_DB_NAME || "snapclass_server",
     userTable: process.env.VISUALIZATION_DB_USER_TABLE || "user",
     traceTable: process.env.VISUALIZATION_DB_TRACE_TABLE || "trace",
     emojiTable: process.env.VISUALIZATION_DB_EMOJI_TABLE || "emoji_reaction",
+    mediaTable: process.env.VISUALIZATION_DB_MEDIA_TABLE || "project_media",
   },
   server: {
     port: parseNumber(process.env.SERVER_PORT || process.env.PORT, 3011),

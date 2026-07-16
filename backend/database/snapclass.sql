@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 08, 2026 at 10:03 PM
+-- Generation Time: Jul 16, 2026 at 07:23 AM
 -- Server version: 8.0.44
 -- PHP Version: 8.2.13
 
@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS `assignment_overall_grade_total` (
 DROP TABLE IF EXISTS `backup`;
 CREATE TABLE IF NOT EXISTS `backup` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `submission_code` mediumtext NOT NULL,
+  `submission_code` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `assignment_id` int DEFAULT NULL,
   `user_id` int DEFAULT NULL,
   `datetime` varchar(100) DEFAULT NULL,
@@ -337,13 +337,27 @@ CREATE TABLE IF NOT EXISTS `lesson` (
   `public` tinyint(1) NOT NULL,
   `name` varchar(255) NOT NULL,
   `grade` int NOT NULL,
-  `learning_objective` enum('Science','Math','ELA','Social Studies','Loops','Conditionals','Abstraction','Lists','Variables','Interdisciplinary','Other') NOT NULL,
   `level` varchar(255) NOT NULL,
   `description` text,
   `user_id` int NOT NULL,
+  `copied` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lesson_topic`
+--
+
+DROP TABLE IF EXISTS `lesson_topic`;
+CREATE TABLE IF NOT EXISTS `lesson_topic` (
+  `lesson_id` int NOT NULL,
+  `topic_id` int NOT NULL,
+  PRIMARY KEY (`lesson_id`,`topic_id`),
+  KEY `fk_lesson_topic_topic` (`topic_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -401,8 +415,10 @@ CREATE TABLE IF NOT EXISTS `mc_student_submit` (
   `id` int NOT NULL AUTO_INCREMENT,
   `assignment_id` int NOT NULL,
   `student_id` int NOT NULL,
+  `section_id` int DEFAULT NULL,
   `mc_submission_data` mediumtext NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `section_id` (`section_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 -- --------------------------------------------------------
@@ -452,16 +468,67 @@ CREATE TABLE IF NOT EXISTS `points_for_category` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `preferences_for_teacher`
+-- Table structure for table `preferences_for_user`
 --
 
-DROP TABLE IF EXISTS `preferences_for_teacher`;
-CREATE TABLE IF NOT EXISTS `preferences_for_teacher` (
-  `teacher_id` int NOT NULL,
-  `homepage_default_view` int DEFAULT '-1',
-  `homepage_default_section` int DEFAULT '-1',
-  PRIMARY KEY (`teacher_id`)
+DROP TABLE IF EXISTS `preferences_for_user`;
+CREATE TABLE IF NOT EXISTS `preferences_for_user` (
+  `user_id` int NOT NULL,
+  `default_color` varchar(20) DEFAULT '#808080',
+  `warning_color` varchar(20) DEFAULT '#FFA500',
+  `alert_color` varchar(20) DEFAULT '#FF0000',
+  `hand_raised_color` varchar(20) DEFAULT '#FFD700',
+  `warn_after_seconds` int DEFAULT '150',
+  `alert_after_seconds` int DEFAULT '300',
+  `seat_label` varchar(50) DEFAULT NULL,
+  `emoji_cooldown` int DEFAULT '20',
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_media`
+--
+
+DROP TABLE IF EXISTS `project_media`;
+CREATE TABLE IF NOT EXISTS `project_media` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `hash` char(64) NOT NULL,
+  `mime_type` varchar(100) NOT NULL,
+  `data` longblob NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_project_media_hash` (`hash`),
+  KEY `idx_project_media_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `registration_code`
+--
+
+DROP TABLE IF EXISTS `registration_code`;
+CREATE TABLE IF NOT EXISTS `registration_code` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `code_hash` varchar(255) NOT NULL,
+  `created_by_user_id` int DEFAULT NULL,
+  `used_by_user_id` int DEFAULT NULL,
+  `school_id` varchar(255) DEFAULT NULL,
+  `expires_at` datetime DEFAULT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `max_uses` int UNSIGNED DEFAULT NULL,
+  `is_unlimited` tinyint(1) NOT NULL DEFAULT '0',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code_hash` (`code_hash`),
+  UNIQUE KEY `unique_email` (`email`),
+  KEY `created_by_user_id` (`created_by_user_id`),
+  KEY `used_by_user_id` (`used_by_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 -- --------------------------------------------------------
 
@@ -505,6 +572,7 @@ CREATE TABLE IF NOT EXISTS `rubric` (
   `description` varchar(255) DEFAULT NULL,
   `is_template` tinyint(1) NOT NULL,
   `user_id` int DEFAULT NULL,
+  `copied` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
@@ -589,7 +657,7 @@ CREATE TABLE IF NOT EXISTS `students_in_section` (
   `id` int NOT NULL AUTO_INCREMENT,
   `section_id` int DEFAULT NULL,
   `user_id` int DEFAULT NULL,
-  `group` int DEFAULT '0',
+  `learning_path` enum('beginner','intermediate','advanced') NOT NULL DEFAULT 'beginner',
   PRIMARY KEY (`id`),
   UNIQUE KEY `section_id` (`section_id`,`user_id`),
   KEY `user_id` (`user_id`)
@@ -604,10 +672,12 @@ CREATE TABLE IF NOT EXISTS `students_in_section` (
 DROP TABLE IF EXISTS `submission`;
 CREATE TABLE IF NOT EXISTS `submission` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `submission_code` mediumtext,
+  `submission_code` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `assignment_id` int DEFAULT NULL,
   `user_id` int DEFAULT NULL,
+  `section_id` int DEFAULT NULL,
   `is_submitted` tinyint(1) NOT NULL,
+  `submitted_at` datetime DEFAULT NULL,
   `level` enum('any','beginner','intermediate','advanced') NOT NULL DEFAULT 'any',
   `short_response` longtext COMMENT 'The document to be uploaded for short response',
   `short_response_file_name` varchar(255) DEFAULT NULL COMMENT 'The name of the short response file',
@@ -616,8 +686,25 @@ CREATE TABLE IF NOT EXISTS `submission` (
   `is_netsblox` bit(1) DEFAULT b'0',
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
-  KEY `assignment_id` (`assignment_id`)
+  KEY `assignment_id` (`assignment_id`),
+  KEY `section_id` (`section_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `topic`
+--
+
+DROP TABLE IF EXISTS `topic`;
+CREATE TABLE IF NOT EXISTS `topic` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `parent_topic_id` int DEFAULT NULL,
+  `sort_order` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `fk_topic_parent` (`parent_topic_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -638,7 +725,7 @@ CREATE TABLE IF NOT EXISTS `trace` (
   `projectID` varchar(40) NOT NULL COMMENT 'A GUID for the Snap project.',
   `sessionID` varchar(40) NOT NULL COMMENT 'A GUID for the browser session.',
   `browserID` varchar(40) NOT NULL COMMENT 'A GUID for the browser.',
-  `code` mediumtext NOT NULL COMMENT 'A snapshot of the xml of the Snap project, if changed from the last log.',
+  `code` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'A snapshot of the xml of the Snap project, if changed from the last log.',
   PRIMARY KEY (`id`),
   KEY `assignmentID` (`assignmentID`),
   KEY `sectionID` (`sectionID`),
@@ -658,6 +745,7 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE IF NOT EXISTS `user` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(255) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `preferred_name` varchar(255) DEFAULT NULL,
   `yob` int DEFAULT NULL,
@@ -754,10 +842,23 @@ ALTER TABLE `help`
   ADD CONSTRAINT `fk_help_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `lesson_topic`
+--
+ALTER TABLE `lesson_topic`
+  ADD CONSTRAINT `fk_lesson_topic_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_lesson_topic_topic` FOREIGN KEY (`topic_id`) REFERENCES `topic` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `mc_questions`
 --
 ALTER TABLE `mc_questions`
   ADD CONSTRAINT `mc_questions_ibfk_1` FOREIGN KEY (`assignment_id`) REFERENCES `assignment` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `mc_student_submit`
+--
+ALTER TABLE `mc_student_submit`
+  ADD CONSTRAINT `mc_student_submit_ibfk_1` FOREIGN KEY (`section_id`) REFERENCES `section` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `peer_review`
@@ -776,10 +877,17 @@ ALTER TABLE `points_for_category`
   ADD CONSTRAINT `points_for_category_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `category` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `preferences_for_teacher`
+-- Constraints for table `preferences_for_user`
 --
-ALTER TABLE `preferences_for_teacher`
-  ADD CONSTRAINT `preferences_for_teacher_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `user` (`id`);
+ALTER TABLE `preferences_for_user`
+  ADD CONSTRAINT `fk_preferences_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `registration_code`
+--
+ALTER TABLE `registration_code`
+  ADD CONSTRAINT `fk_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `user` (`id`),
+  ADD CONSTRAINT `fk_used_by` FOREIGN KEY (`used_by_user_id`) REFERENCES `user` (`id`);
 
 --
 -- Constraints for table `role_for_user`
@@ -825,7 +933,14 @@ ALTER TABLE `students_in_section`
 --
 ALTER TABLE `submission`
   ADD CONSTRAINT `submission_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `submission_ibfk_2` FOREIGN KEY (`assignment_id`) REFERENCES `assignment` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `submission_ibfk_2` FOREIGN KEY (`assignment_id`) REFERENCES `assignment` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `submission_ibfk_3` FOREIGN KEY (`section_id`) REFERENCES `section` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `topic`
+--
+ALTER TABLE `topic`
+  ADD CONSTRAINT `fk_topic_parent` FOREIGN KEY (`parent_topic_id`) REFERENCES `topic` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `user`

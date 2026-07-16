@@ -97,6 +97,7 @@ Primary env variables:
 - `VISUALIZATION_DB_USER_TABLE`
 - `VISUALIZATION_DB_TRACE_TABLE`
 - `VISUALIZATION_DB_EMOJI_TABLE`
+- `VISUALIZATION_DB_MEDIA_TABLE`
 - `SERVER_PORT` (or `PORT`)
 - `EMAIL_SERVICE`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
 - `EMAIL_USER`, `EMAIL_APP_PASSWORD`, `EMAIL_FROM`
@@ -177,4 +178,3 @@ or the researchers in charge
 
 - Dr. Ally Limke — `anlimke@ncsu.edu`
 - Yasitha Rajapaksha — `yrajapa@ncsu.edu`
-
