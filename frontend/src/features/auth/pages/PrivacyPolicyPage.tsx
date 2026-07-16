@@ -80,12 +80,8 @@ const sections = [
         paragraphs: ["Support email: game2learnlab@ncsu.edu"],
         customContent: (
             <div className="legal-contact-block">
-                <p className="legal-contact-subtitle">Researchers in charge</p>
+                <p className="legal-contact-subtitle">Researcher in charge</p>
                 <div className="legal-contact-grid">
-                    <div className="legal-contact-card">
-                        <span className="legal-contact-name">Dr. Ally Limke</span>
-                        <span className="legal-contact-email">anlimke@ncsu.edu</span>
-                    </div>
                     <div className="legal-contact-card">
                         <span className="legal-contact-name">Yasitha Rajapaksha</span>
                         <span className="legal-contact-email">yrajapa@ncsu.edu</span>

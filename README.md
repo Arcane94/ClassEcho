@@ -174,7 +174,6 @@ For questions about ClassEcho, please contact:
 
 - Game2Learn Lab — `game2learnlab@ncsu.edu`
 
-or the researchers in charge
+or the researcher in charge
 
-- Dr. Ally Limke — `anlimke@ncsu.edu`
 - Yasitha Rajapaksha — `yrajapa@ncsu.edu`
