@@ -1,4 +1,5 @@
 import LegalDocumentPage from "@/features/auth/components/LegalDocumentPage";
+import ContactForm from "@/features/auth/components/ContactForm";
 
 const sections = [
     {
@@ -77,18 +78,10 @@ const sections = [
     },
     {
         title: "Contact",
-        paragraphs: ["Support email: game2learnlab@ncsu.edu"],
-        customContent: (
-            <div className="legal-contact-block">
-                <p className="legal-contact-subtitle">Researcher in charge</p>
-                <div className="legal-contact-grid">
-                    <div className="legal-contact-card">
-                        <span className="legal-contact-name">Yasitha Rajapaksha</span>
-                        <span className="legal-contact-email">yrajapa@ncsu.edu</span>
-                    </div>
-                </div>
-            </div>
-        ),
+        paragraphs: [
+            "For questions or other inquiries, contact the Game2Learn Lab at NC State University or the researchers in charge.",
+        ],
+        customContent: <ContactForm />,
     },
 ] as const;
 

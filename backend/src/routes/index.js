@@ -5,6 +5,7 @@ const teacherRoutes = require('./teacherObservations');
 const studentRoutes = require('./studentObservations');
 const userRoutes = require('./user');
 const visualizationRoutes = require('./visualization');
+const contactRoutes = require('./contact');
 
 const router = express.Router();
 
@@ -13,5 +14,6 @@ router.use('/sessions', sessionRoutes);
 router.use('/observations/teacher', teacherRoutes);
 router.use('/observations/student', studentRoutes);
 router.use('/visualization', visualizationRoutes);
+router.use('/contact', contactRoutes);
 
 module.exports = router;

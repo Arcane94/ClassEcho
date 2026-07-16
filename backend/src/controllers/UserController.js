@@ -4,57 +4,17 @@
 const User = require(`../models/UserModel`);
 const Session = require(`../models/SessionModel`);
 const SessionAccess = require('../models/SessionAccessModel');
-const config = require('../config/appConfig');
 const { describeSessionAccess, serializeSessionForUser } = require('../utils/sessionAccess');
+const { createEmailTransporter, getEmailConfig } = require('../services/emailService');
 
 // Import bycrypt for password hashing
 const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 // Number of salt rounds for bcrypt
 const SALT_ROUNDS = 10;
 const PASSWORD_RESET_CODE_TTL_MS = 10 * 60 * 1000;
 const passwordResetCodes = new Map();
 const INVALID_LOGIN_ERROR = 'Invalid username or password.';
-
-function getEmailConfig() {
-    return {
-        service: process.env.EMAIL_SERVICE || config.email?.service || 'gmail',
-        host: process.env.SMTP_HOST || config.email?.host,
-        port: Number(process.env.SMTP_PORT || config.email?.port || 587),
-        secure: String(process.env.SMTP_SECURE || config.email?.secure || 'false') === 'true',
-        user: process.env.EMAIL_USER || config.email?.user,
-        pass: process.env.EMAIL_APP_PASSWORD || config.email?.appPassword,
-        from: process.env.EMAIL_FROM || config.email?.from || process.env.EMAIL_USER || config.email?.user,
-    };
-}
-
-function createEmailTransporter() {
-    const emailConfig = getEmailConfig();
-    if (!emailConfig.user || !emailConfig.pass) {
-        throw new Error('Email credentials are missing. Set EMAIL_USER and EMAIL_APP_PASSWORD.');
-    }
-
-    if (emailConfig.host) {
-        return nodemailer.createTransport({
-            host: emailConfig.host,
-            port: emailConfig.port,
-            secure: emailConfig.secure,
-            auth: {
-                user: emailConfig.user,
-                pass: emailConfig.pass,
-            },
-        });
-    }
-
-    return nodemailer.createTransport({
-        service: emailConfig.service,
-        auth: {
-            user: emailConfig.user,
-            pass: emailConfig.pass,
-        },
-    });
-}
 
 function hashResetCode(resetCode) {
     return crypto.createHash('sha256').update(String(resetCode)).digest('hex');

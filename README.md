@@ -101,6 +101,7 @@ Primary env variables:
 - `SERVER_PORT` (or `PORT`)
 - `EMAIL_SERVICE`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
 - `EMAIL_USER`, `EMAIL_APP_PASSWORD`, `EMAIL_FROM`
+- `CONTACT_EMAIL_LAB`, `CONTACT_EMAIL_ALLY_LIMKE`, `CONTACT_EMAIL_YASITHA_RAJAPAKSHA`
 
 ## Frontend API Base URL
 
@@ -170,10 +171,4 @@ https://doi.org/10.1145/3772363.3798572
 
 ## Contact Us
 
-For questions about ClassEcho, please contact:
-
-- Game2Learn Lab — `game2learnlab@ncsu.edu`
-
-or the researcher in charge
-
-- Yasitha Rajapaksha — `yrajapa@ncsu.edu`
+For questions about ClassEcho, use the contact form on the Privacy Policy or Terms of Use page at the [deployed application](https://classecho.app/).

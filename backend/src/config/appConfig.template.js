@@ -44,6 +44,13 @@ const config = {
     appPassword: process.env.EMAIL_APP_PASSWORD || "",
     from: process.env.EMAIL_FROM || "",
   },
+  contact: {
+    recipients: {
+      lab: process.env.CONTACT_EMAIL_LAB || "",
+      allyLimke: process.env.CONTACT_EMAIL_ALLY_LIMKE || "",
+      yasithaRajapaksha: process.env.CONTACT_EMAIL_YASITHA_RAJAPAKSHA || "",
+    },
+  },
 };
 
 module.exports = config;
