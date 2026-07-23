@@ -13,16 +13,9 @@ const {
   findProjectMediaHashes,
   rehydrateProjectMedia,
 } = require('../utils/projectMediaRehydration');
-
-function parseStudents(raw) {
-  return String(raw ?? '')
-    .trim()
-    .split(/[,\s]+/)
-    .map((value) => value.replace(/\D+/g, ''))
-    .filter(Boolean)
-    .map((value) => String(Number(value)))
-    .filter((value, index, values) => values.indexOf(value) === index);
-}
+const {
+  parseVisualizationStudentIdentifiers,
+} = require('../utils/visualizationStudentIdentifiers');
 
 function parsePrefix(raw) {
   return String(raw ?? '').trim();
@@ -408,7 +401,7 @@ exports.getCodeUrls = async (req, res) => {
       return res.status(accessResult.error.status).json({ ok: false, ...accessResult.error.payload });
     }
 
-    const students = parseStudents(req.query.students);
+    const students = parseVisualizationStudentIdentifiers(req.query.students);
     const prefix = parsePrefix(req.query.prefix);
     const replayTimeZone = normalizeTimeZone(req.query.time_zone ?? req.query.timezone) || EASTERN_TIME_ZONE;
     const start = toMysqlDatetime(req.query.start);
@@ -536,7 +529,7 @@ exports.getEmojiReactions = async (req, res) => {
       return res.status(accessResult.error.status).json({ ok: false, ...accessResult.error.payload });
     }
 
-    const students = parseStudents(req.query.students);
+    const students = parseVisualizationStudentIdentifiers(req.query.students);
     const prefix = parsePrefix(req.query.prefix);
     const start = toMysqlDatetime(req.query.start);
     const end = toMysqlDatetime(req.query.end);
