@@ -92,6 +92,23 @@ function splitLogStudentIds(raw: string) {
         .filter(Boolean);
 }
 
+function getStudentIdFilterVariants(raw: string) {
+    const studentId = raw.trim();
+    const variants = [studentId];
+
+    if (!/^\d+$/.test(studentId)) {
+        return variants;
+    }
+
+    let nextVariant = studentId;
+    while (nextVariant.length > 1 && nextVariant.startsWith("0")) {
+        nextVariant = nextVariant.slice(1);
+        variants.push(nextVariant);
+    }
+
+    return variants;
+}
+
 function formatStudentPillLabel(raw: string) {
     const studentIds = splitLogStudentIds(raw);
     if (studentIds.length <= 1) {
@@ -200,8 +217,8 @@ export function LogsPanel({
         return logsAll.filter((row) => {
             const rowStudentIds = splitLogStudentIds(row.student_id);
             if (!anyMatch(f.student, (v) => {
-                const needle = v.trim();
-                return row.student_id === needle || rowStudentIds.includes(needle);
+                const filterVariants = getStudentIdFilterVariants(v);
+                return rowStudentIds.some((studentId) => filterVariants.includes(studentId));
             })) return false;
 
             for (const [filterKey, values] of Object.entries(f)) {
