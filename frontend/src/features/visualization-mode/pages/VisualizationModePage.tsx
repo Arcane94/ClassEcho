@@ -1,6 +1,6 @@
 // Visualization playback page that loads session data, applies replay windows, and renders the viewer.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, List, RefreshCw } from "lucide-react";
+import { Home, List, Maximize2, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import type { SessionData } from "@/services/fetchSessionById";
@@ -11,6 +11,7 @@ import { CumulativeHeatmap } from "../components/CumulativeHeatmap";
 import { StudentCodeView } from "../components/StudentCodeView";
 import { InfoTip } from "../components/InfoTip";
 import { UploadChip } from "../components/UploadChip";
+import { ExpandedPlaybackBar } from "../components/ExpandedPlaybackBar";
 
 import type {
   LogFilterDefinition,
@@ -124,6 +125,7 @@ export default function VisualizationModePage() {
   const currentUserId = localStorage.getItem("user_id");
   const [speed, setSpeed] = useState(1);
   const [theme, setTheme] = useState<"dark" | "light">("light");
+  const [isExpandedView, setIsExpandedView] = useState(false);
   const [sourceMode, setSourceMode] = useState<VisualizationSourceMode>(() =>
     selectedSessionId ? "db" : "csv",
   );
@@ -145,6 +147,21 @@ export default function VisualizationModePage() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!isExpandedView) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsExpandedView(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isExpandedView]);
 
   const [scheduleRows, setScheduleRows] = useState<VisualizationScheduleRow[]>([]);
   const [dbHelpRows, setDbHelpRows] = useState<HelpRow[] | null>(null);
@@ -989,10 +1006,18 @@ export default function VisualizationModePage() {
   const logPanelTitle = studentViewId ? `Student ${studentViewId}'s Logs` : "Logs";
 
   return (
-      <div className={`visualization-page${shouldCenterShell ? " visualization-page-centered" : ""}`}>
+      <div
+        className={[
+          "visualization-page",
+          shouldCenterShell && !isExpandedView ? "visualization-page-centered" : "",
+          isExpandedView ? "visualization-page-expanded" : "",
+        ].filter(Boolean).join(" ")}
+      >
         <div className="visualization-shell card shell">
-          <div className="px-2 sm:px-3">
-            <div className="viewer-header">
+          <div className="visualization-shell-inner px-2 sm:px-3">
+            {!isExpandedView ? (
+              <>
+                <div className="viewer-header">
               <div className="viewer-header-nav">
                 <button
                   type="button"
@@ -1051,10 +1076,10 @@ export default function VisualizationModePage() {
                   {theme === "dark" ? "Light Theme" : "Dark Theme"}
                 </button>
               </div>
-            </div>
+                </div>
 
-            {/* Uploads */}
-            <div className="toolbar">
+                {/* Uploads */}
+                <div className="toolbar">
               {hasSelectedSession ? (
                 <div className="toolbar-source">
                   <div className="source-toggle" role="tablist" aria-label="Visualization data source">
@@ -1120,9 +1145,9 @@ export default function VisualizationModePage() {
                   </>
                 ) : null}
               </div>
-            </div>
+                </div>
 
-              <ControlsPanel
+                <ControlsPanel
                   selectedDate={selectedDate}
                   dateOptions={dateOptions}
                   period={period}
@@ -1148,7 +1173,29 @@ export default function VisualizationModePage() {
                 onSliderChange={(v) => setSlider(v)}
                 allDatesMode={selectedDate === ALL_DATES}
                 allDatesValue={ALL_DATES}
-            />
+                />
+
+              </>
+            ) : (
+              <ExpandedPlaybackBar
+                selectedDate={selectedDate}
+                dateOptions={dateOptions}
+                period={period}
+                periods={periods}
+                slider={slider}
+                sliderMax={sliderMax}
+                current={current}
+                statusText={statusText}
+                currentTime={hudLine.clock}
+                allDatesMode={selectedDate === ALL_DATES}
+                allDatesValue={ALL_DATES}
+                formatDateLabel={formatDateLabel}
+                onDateChange={handleDateChange}
+                onPeriodChange={handlePeriodChange}
+                onSliderChange={setSlider}
+                onExitExpandedView={() => setIsExpandedView(false)}
+              />
+            )}
 
             <div className="main-row">
               <div id="stage" className={`stage${hasStageContent ? "" : " stage-empty"}`}>
@@ -1245,13 +1292,31 @@ export default function VisualizationModePage() {
               </div>
 
               <div className={`log-panel${hasLogContent ? "" : " log-panel-empty"}`}>
-                <div className="panel-title-row">
-                  <div className="panel-title">{logPanelTitle}</div>
-                  <InfoTip
-                    content="Shows the observation log entries for the current session. Click a log entry to jump playback to that moment."
-                    label="Explain logs"
-                    align="right"
-                  />
+                <div className="panel-title-row log-panel-title-row">
+                  <div className="log-panel-title-group">
+                    <div className="panel-title">{logPanelTitle}</div>
+                    <InfoTip
+                      content="Shows the observation log entries for the current session. Click a log entry to jump playback to that moment."
+                      label="Explain logs"
+                      align="right"
+                    />
+                  </div>
+                  {!isExpandedView ? (
+                    <button
+                      type="button"
+                      className="view-mode-button log-panel-expand-button"
+                      onClick={() => setIsExpandedView(true)}
+                      disabled={!hasStageContent && !hasLogContent}
+                      title={
+                        hasStageContent || hasLogContent
+                          ? "Enlarge the seating chart and logs"
+                          : "Choose a replay window before expanding the visualization"
+                      }
+                    >
+                      <Maximize2 size={16} aria-hidden="true" />
+                      Expanded view
+                    </button>
+                  ) : null}
                 </div>
 
                 <div className="log-filterbar">
