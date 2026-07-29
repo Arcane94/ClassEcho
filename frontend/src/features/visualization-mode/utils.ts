@@ -54,6 +54,23 @@ function intlikeStr(v: any): string {
     return Number.isFinite(x) ? String(Math.trunc(x)) : s;
 }
 
+export function getStudentIdVariants(rawValue: string): string[] {
+    const studentId = cleanCsvText(rawValue);
+    const variants = [studentId];
+
+    if (!/^\d+$/.test(studentId)) {
+        return variants;
+    }
+
+    let nextVariant = studentId;
+    while (nextVariant.length > 1 && nextVariant.startsWith("0")) {
+        nextVariant = nextVariant.slice(1);
+        variants.push(nextVariant);
+    }
+
+    return variants;
+}
+
 function splitObservationStudentIds(rawValue: string): string[] {
     return Array.from(
         new Set(
@@ -881,6 +898,15 @@ export function buildGroups(
                 .map((s) => s.studentid)
                 .filter((sid) => Boolean(sid) && sid !== "-1")
         );
+        const resolvePresentStudentId = (studentId: string) => {
+            if (present.has(studentId)) {
+                return studentId;
+            }
+
+            return Array.from(present).find((configuredId) =>
+                getStudentIdVariants(configuredId).includes(studentId)
+            ) ?? null;
+        };
 
         let t0 = item.t0 ? new Date(item.t0) : null;
         let t1 = item.t1 ? new Date(item.t1) : null;
@@ -926,11 +952,12 @@ export function buildGroups(
                     const studentIds = splitObservationStudentIds(rec.student_id);
 
                     for (const studentId of studentIds) {
-                        if (!present.has(studentId)) continue;
-                        if (!helpIntervals[studentId]) {
-                            helpIntervals[studentId] = [];
+                        const configuredStudentId = resolvePresentStudentId(studentId);
+                        if (!configuredStudentId) continue;
+                        if (!helpIntervals[configuredStudentId]) {
+                            helpIntervals[configuredStudentId] = [];
                         }
-                        helpIntervals[studentId].push([sIso, eIso]);
+                        helpIntervals[configuredStudentId].push([sIso, eIso]);
                     }
 
                     teacherLogs.push({
@@ -982,11 +1009,12 @@ export function buildGroups(
                 if (isHelpRequestBehavior(rec.tag_sections)) {
                     let matchedStudent = false;
                     for (const studentId of studentIds) {
-                        if (!present.has(studentId)) continue;
-                        if (!requestIntervals[studentId]) {
-                            requestIntervals[studentId] = [];
+                        const configuredStudentId = resolvePresentStudentId(studentId);
+                        if (!configuredStudentId) continue;
+                        if (!requestIntervals[configuredStudentId]) {
+                            requestIntervals[configuredStudentId] = [];
                         }
-                        requestIntervals[studentId].push([sIso, eIso]);
+                        requestIntervals[configuredStudentId].push([sIso, eIso]);
                         matchedStudent = true;
                     }
                     if (matchedStudent) {

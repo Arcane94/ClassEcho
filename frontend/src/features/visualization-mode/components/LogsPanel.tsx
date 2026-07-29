@@ -8,7 +8,7 @@ import {
 } from "react";
 import type { EmojiReactionInterval, GroupPayload, LogFilters, LogTagSection } from "../types";
 import { isSectionFilterKey } from "../types";
-import { clsx, fmtMS, VISUALIZATION_ICON_BASE } from "../utils";
+import { clsx, fmtMS, getStudentIdVariants, VISUALIZATION_ICON_BASE } from "../utils";
 
 type LogsPanelProps = {
     group: GroupPayload;
@@ -90,23 +90,6 @@ function splitLogStudentIds(raw: string) {
         .split(/[;,]+/)
         .map((value) => value.trim())
         .filter(Boolean);
-}
-
-function getStudentIdFilterVariants(raw: string) {
-    const studentId = raw.trim();
-    const variants = [studentId];
-
-    if (!/^\d+$/.test(studentId)) {
-        return variants;
-    }
-
-    let nextVariant = studentId;
-    while (nextVariant.length > 1 && nextVariant.startsWith("0")) {
-        nextVariant = nextVariant.slice(1);
-        variants.push(nextVariant);
-    }
-
-    return variants;
 }
 
 function formatStudentPillLabel(raw: string) {
@@ -217,7 +200,7 @@ export function LogsPanel({
         return logsAll.filter((row) => {
             const rowStudentIds = splitLogStudentIds(row.student_id);
             if (!anyMatch(f.student, (v) => {
-                const filterVariants = getStudentIdFilterVariants(v);
+                const filterVariants = getStudentIdVariants(v);
                 return rowStudentIds.some((studentId) => filterVariants.includes(studentId));
             })) return false;
 
