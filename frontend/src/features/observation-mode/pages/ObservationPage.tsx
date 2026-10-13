@@ -63,6 +63,9 @@ export default function ObservationPage() {
     //State to store when the current recording started so offline replays keep the original timestamp
     const [recordingStartedAt, setRecordingStartedAt] = useState<string | null>(null);
 
+    // Start time for a non-record observation, set when the first tag is selected
+    const [tagStartedAt, setTagStartedAt] = useState<string | null>(null);
+
     //State to store potential extra notes from teacherObsrvation
     const [extraTeacherNote, setExtraTeacherNote] = useState("");
 
@@ -160,6 +163,10 @@ export default function ObservationPage() {
           return [...array, item];
         }
       };
+
+    const captureTagStartIfNeeded = () => {
+        setTagStartedAt((previous) => previous ?? new Date().toISOString());
+    };
   
     //Helper function to clear all user selections when a observation is submitted
     const clearUserSelections = () => {
@@ -178,19 +185,30 @@ export default function ObservationPage() {
             setStudentObsStudentId('');
             setSelectedStudentCustomTags([]);
         }
+        setTagStartedAt(null);
     }
     //Helper function to toggle if a student custom tag is selected or not
     const toggleStudentCustomTag = (tag: string) => {
+        if (!selectedStudentCustomTags.includes(tag)) {
+            captureTagStartIfNeeded();
+        }
         setSelectedStudentCustomTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
     }
 
     //Helper function to toggle if a teacher custom tag is selected or not
     const toggleTeacherCustomTag = (tag: string) => {
+        if (!selectedTeacherCustomTags.includes(tag)) {
+            captureTagStartIfNeeded();
+        }
         setSelectedTeacherCustomTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
     }
 
     //Helper function to handle when a teacher behavior tag is clicked
     const handleTeacherBehaviorTagClick = (tag: string) => {
+        if (!selectedBehaviorTags.includes(tag)) {
+            captureTagStartIfNeeded();
+        }
+
         setSelectedBehaviorTags((prevTags: string[]) => {
             const updated = toggleStringInArray(prevTags, tag);
     
@@ -207,6 +225,7 @@ export default function ObservationPage() {
 
     //Helper function to handle a teacher position tag click with some added logging
     const handleTeacherPositionTagClick = (tag: string) => {
+        captureTagStartIfNeeded();
         setBehaviorClass(tag);
         console.log(`[${new Date().toISOString()}] Setting teacher position to ${tag}`);
     };
@@ -299,6 +318,7 @@ export default function ObservationPage() {
         const observationWindow = buildObservationWindow({
             sustained,
             recordingStartedAt,
+            tagStartedAt,
         });
         const normalizedTeacherStudentId = normalizeStudentIdForSubmission(teacherObsStudentId, studentIdNumericOnly);
 
@@ -343,6 +363,7 @@ export default function ObservationPage() {
         const observationWindow = buildObservationWindow({
             sustained,
             recordingStartedAt,
+            tagStartedAt,
         });
         const normalizedStudentStudentId = normalizeStudentIdForSubmission(studentObsStudentId, studentIdNumericOnly);
 
@@ -562,6 +583,9 @@ export default function ObservationPage() {
                     isActive={(tag) => selectedFunctionTags.includes(tag) || selectedTeacherCustomTags.includes(`${tag} - Function`)}
                     onToggle={(tag) => {
                         if (functionTags.includes(tag)) {
+                            if (!selectedFunctionTags.includes(tag)) {
+                                captureTagStartIfNeeded();
+                            }
                             setSelectedFunctionTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
                         } else {
                             toggleTeacherCustomTag(`${tag} - Function`);
@@ -580,6 +604,9 @@ export default function ObservationPage() {
                     isActive={(tag) => selectedStructureTags.includes(tag) || selectedTeacherCustomTags.includes(`${tag} - Structure`)}
                     onToggle={(tag) => {
                         if (structureTags.includes(tag)) {
+                            if (!selectedStructureTags.includes(tag)) {
+                                captureTagStartIfNeeded();
+                            }
                             setSelectedStructureTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
                         } else {
                             toggleTeacherCustomTag(`${tag} - Structure`);
@@ -662,6 +689,9 @@ export default function ObservationPage() {
                     isActive={(tag) => selectedStudentTags.includes(tag) || selectedStudentCustomTags.includes(`${tag} - Behavior`)}
                     onToggle={(tag) => {
                         if (studentTags.includes(tag)) {
+                            if (!selectedStudentTags.includes(tag)) {
+                                captureTagStartIfNeeded();
+                            }
                             setSelectedStudentTags((prevTags: string[]) => toggleStringInArray(prevTags, tag));
                         } else {
                             toggleStudentCustomTag(`${tag} - Behavior`);
