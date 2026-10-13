@@ -88,6 +88,9 @@ export default function ObservationSessionPage() {
     //State to store when the current recording started so offline replays keep the original timestamp
     const [recordingStartedAt, setRecordingStartedAt] = useState<string | null>(null);
 
+    // Start time for a non-record observation, set when the first tag is selected
+    const [tagStartedAt, setTagStartedAt] = useState<string | null>(null);
+
     //State to store potential extra notes from teacherObsrvation
     const [extraTeacherNote, setExtraTeacherNote] = useState("");
 
@@ -205,19 +208,28 @@ export default function ObservationSessionPage() {
         return () => window.clearTimeout(timeoutId);
     }, [recentSuccessAction]);
 
+    const captureTagStartIfNeeded = () => {
+        setTagStartedAt((previous) => previous ?? new Date().toISOString());
+    };
+
     //Helper function to toggle a student tag in the selectedStudentTags state
     const toggleStudentTag = (sectionName: string, tag: string) => {
+        const sectionTags = selectedStudentTags[sectionName] || [];
+        if (!sectionTags.includes(tag)) {
+            captureTagStartIfNeeded();
+        }
+
         setSelectedStudentTags(prev => {
-            const sectionTags = prev[sectionName] || [];
-            if (sectionTags.includes(tag)) {
+            const currentTags = prev[sectionName] || [];
+            if (currentTags.includes(tag)) {
                 return {
                     ...prev,
-                    [sectionName]: sectionTags.filter(t => t !== tag)
+                    [sectionName]: currentTags.filter(t => t !== tag)
                 };
             } else {
                 return {
                     ...prev,
-                    [sectionName]: [...sectionTags, tag]
+                    [sectionName]: [...currentTags, tag]
                 };
             }
         });
@@ -225,17 +237,22 @@ export default function ObservationSessionPage() {
 
     //Helper function to toggle a teacher tag in the selectedStructureTags state
     const toggleTeacherTag = (sectionName: string, tag: string) => {
+        const sectionTags = selectedTeacherTags[sectionName] || [];
+        if (!sectionTags.includes(tag)) {
+            captureTagStartIfNeeded();
+        }
+
         setSelectedTeacherTags(prev => {
-            const sectionTags = prev[sectionName] || [];
-            if (sectionTags.includes(tag)) {
+            const currentTags = prev[sectionName] || [];
+            if (currentTags.includes(tag)) {
                 return {
                     ...prev,
-                    [sectionName]: sectionTags.filter(t => t !== tag)
+                    [sectionName]: currentTags.filter(t => t !== tag)
                 };
             } else {
                 return {
                     ...prev,
-                    [sectionName]: [...sectionTags, tag]
+                    [sectionName]: [...currentTags, tag]
                 };
             }
         });
@@ -324,10 +341,12 @@ export default function ObservationSessionPage() {
             setIsStudentOnTask(true);
             setStudentObsStudentId('');
         }
+        setTagStartedAt(null);
     }
 
     //Helper function to handle a teacher position tag click with some added logging
     const handleTeacherPositionTagClick = (tag: string) => {
+        captureTagStartIfNeeded();
         setBehaviorClass(tag);
         console.log(`[${new Date().toISOString()}] Setting teacher position to ${tag}`);
     };
@@ -352,6 +371,7 @@ export default function ObservationSessionPage() {
         const observationWindow = buildObservationWindow({
             sustained,
             recordingStartedAt,
+            tagStartedAt,
         });
         const normalizedTeacherStudentId = normalizeStudentIdForSubmission(teacherObsStudentId, studentIdNumericOnly);
 
@@ -401,6 +421,7 @@ export default function ObservationSessionPage() {
         const observationWindow = buildObservationWindow({
             sustained,
             recordingStartedAt,
+            tagStartedAt,
         });
         const normalizedStudentStudentId = normalizeStudentIdForSubmission(studentObsStudentId, studentIdNumericOnly);
 

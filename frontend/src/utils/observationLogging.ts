@@ -26,10 +26,12 @@ export function getStoredObserverId(): number | null {
 export function buildObservationWindow({
   sustained,
   recordingStartedAt,
+  tagStartedAt,
   clickedAt = new Date(),
 }: {
   sustained: boolean;
   recordingStartedAt?: string | null;
+  tagStartedAt?: string | null;
   clickedAt?: Date;
 }): {
   start_time: string;
@@ -46,6 +48,15 @@ export function buildObservationWindow({
       start_time: safeStartTime.toISOString(),
       end_time: safeClickedAt.toISOString(),
       recording: 1,
+    };
+  }
+
+  const parsedTagStartTime = tagStartedAt ? new Date(tagStartedAt) : null;
+  if (parsedTagStartTime && isValidDate(parsedTagStartTime)) {
+    return {
+      start_time: parsedTagStartTime.toISOString(),
+      end_time: safeClickedAt.toISOString(),
+      recording: 0,
     };
   }
 
